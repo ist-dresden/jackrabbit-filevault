@@ -109,6 +109,8 @@ public interface Constants {
      */
     String DOT_CONTENT_XML = ".content.xml";
 
+    String DOT_VERSIONS_XML = ".versions.xml";
+
     /**
      * empty string array
      */

@@ -17,6 +17,7 @@
 
 package org.apache.jackrabbit.vault.fs.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import javax.jcr.RepositoryException;
 
 import org.apache.jackrabbit.vault.fs.api.Aggregator;
 import org.apache.jackrabbit.vault.fs.api.DumpContext;
+import org.apache.jackrabbit.vault.fs.impl.aggregator.VersionAggregatorDecorator;
 
 /**
  * List of configured aggregators that selects one given a repository node.
@@ -36,6 +38,7 @@ public class AggregatorProvider {
      * list of aggregators
      */
     private final List<Aggregator> aggregators;
+    private final List<Aggregator> decorated = new ArrayList<Aggregator>();
 
     /**
      * Constructs a new aggregator provider with a given aggregator list.
@@ -43,6 +46,9 @@ public class AggregatorProvider {
      */
     public AggregatorProvider(List<Aggregator> aggregators) {
         this.aggregators = Collections.unmodifiableList(aggregators);
+        for (Aggregator aggregator : aggregators) {
+            decorated.add(new VersionAggregatorDecorator(aggregator));
+        }
     }
 
     /**
@@ -63,7 +69,7 @@ public class AggregatorProvider {
      * @throws RepositoryException if a repository error occurs
      */
     public Aggregator getAggregator(Node node, String path) throws RepositoryException {
-        for (Aggregator a: aggregators) {
+        for (Aggregator a: decorated) {
             if (a.matches(node, path)) {
                 return a;
             }
