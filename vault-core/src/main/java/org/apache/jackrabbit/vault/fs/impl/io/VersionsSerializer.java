@@ -1,26 +1,30 @@
 package org.apache.jackrabbit.vault.fs.impl.io;
 
+import org.apache.jackrabbit.util.Base64;
 import org.apache.jackrabbit.vault.fs.api.Aggregate;
 import org.apache.jackrabbit.vault.fs.api.SerializationType;
 import org.apache.jackrabbit.vault.fs.impl.AggregateImpl;
 import org.apache.jackrabbit.vault.fs.io.Serializer;
+import org.apache.jackrabbit.vault.util.DocViewProperty;
 import org.apache.jackrabbit.vault.util.xml.serialize.OutputFormat;
 import org.apache.jackrabbit.vault.util.xml.serialize.XMLSerializer;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
+import javax.jcr.Binary;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.Property;
 import javax.jcr.PropertyIterator;
+import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
-import javax.jcr.Value;
 import javax.jcr.Workspace;
 import javax.jcr.version.VersionHistory;
 import javax.jcr.version.VersionManager;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringWriter;
 
 import static org.apache.jackrabbit.commons.NamespaceHelper.JCR;
 import static org.apache.jackrabbit.commons.NamespaceHelper.MIX;
@@ -74,22 +78,18 @@ public class VersionsSerializer implements Serializer {
 
     }
 
-    private void writeNode(XMLSerializer ser, Node node) throws RepositoryException, SAXException {
+    private void writeNode(XMLSerializer ser, Node node) throws RepositoryException, SAXException, IOException {
         final PropertyIterator properties = node.getProperties();
         AttributesImpl pattrs = new AttributesImpl();
         while (properties.hasNext()) {
             final Property property = properties.nextProperty();
-            if (property.isMultiple()) {
-                final Value[] values = property.getValues();
-                StringBuilder result = new StringBuilder();
-                for (Value value : values) {
-                    result.append(value.getString());
-                    result.append(",");
-                }
-                String mpvalue = "[" + (result.length() > 0 ? result.substring(0, result.length() - 1) : "") + "]";
-                pattrs.addAttribute("", property.getName(), "", "CDATA", mpvalue);
+            if (property.getType() == PropertyType.BINARY) {
+                final Binary binary = property.getBinary();
+                StringWriter writer = new StringWriter();
+                Base64.encode(binary.getStream(), writer);
+                pattrs.addAttribute("", property.getName(), "", "CDATA", "{Binary}" + writer.toString());
             } else {
-                pattrs.addAttribute("", property.getName(), "", "CDATA", property.getString());
+                pattrs.addAttribute("", property.getName(), "", "CDATA", DocViewProperty.format(property));
             }
         }
         pattrs.addAttribute(VAULT_NS_URI, "nodename", "", "CDATA", node.getName());
