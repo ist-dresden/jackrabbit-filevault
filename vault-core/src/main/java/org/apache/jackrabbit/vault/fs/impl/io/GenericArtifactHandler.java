@@ -28,6 +28,7 @@ import javax.xml.parsers.SAXParserFactory;
 import org.apache.jackrabbit.vault.fs.api.Artifact;
 import org.apache.jackrabbit.vault.fs.api.ImportMode;
 import org.apache.jackrabbit.vault.fs.api.SerializationType;
+import org.apache.jackrabbit.vault.fs.api.VaultInputSource;
 import org.apache.jackrabbit.vault.fs.api.WorkspaceFilter;
 import org.apache.jackrabbit.vault.fs.impl.ArtifactSetImpl;
 import org.apache.jackrabbit.vault.fs.spi.ACLManagement;
@@ -104,6 +105,25 @@ public class GenericArtifactHandler extends AbstractArtifactHandler {
                 info = new ImportInfoImpl();
                 info.onError(path, e);
                 log.error("Error while parsing {}: {}", source.getSystemId(), e);
+            }
+        }
+        Artifact versions = artifacts.getVersionsData();
+        if (versions != null) {
+            // import versions
+            final VaultInputSource inputSource = versions.getInputSource();
+            if (inputSource != null && versions.getSerializationType() == SerializationType.XML_GENERIC) {
+                try {
+                    VersionsSAXImporter handler = new VersionsSAXImporter(parent);
+                    SAXParserFactory factory = SAXParserFactory.newInstance();
+                    factory.setNamespaceAware(true);
+                    factory.setFeature("http://xml.org/sax/features/namespace-prefixes", false);
+                    SAXParser parser = factory.newSAXParser();
+                    parser.parse(inputSource, handler);
+                } catch (ParserConfigurationException e) {
+                    throw new RepositoryException(e);
+                } catch (SAXException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return info;

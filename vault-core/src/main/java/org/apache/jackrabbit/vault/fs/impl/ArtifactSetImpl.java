@@ -103,7 +103,7 @@ public class ArtifactSetImpl implements Dumpable, ArtifactSet {
 
     public void add(Artifact artifact) {
         ArtifactType type = artifact.getType();
-        if (type == ArtifactType.PRIMARY || type == ArtifactType.DIRECTORY) {
+        if (type == ArtifactType.PRIMARY || type == ArtifactType.DIRECTORY || type == ArtifactType.VERSIONS) {
             if (single.containsKey(type)) {
                 throw new IllegalArgumentException("Only 1 " + type + " artifact allowed.");
             }
@@ -169,6 +169,10 @@ public class ArtifactSetImpl implements Dumpable, ArtifactSet {
 
     public Artifact getDirectory() {
         return single.get(ArtifactType.DIRECTORY);
+    }
+
+    public Artifact getVersionsData() {
+        return single.get(ArtifactType.VERSIONS);
     }
 
     public boolean isEmpty() {

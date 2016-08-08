@@ -66,6 +66,7 @@ import org.apache.jackrabbit.vault.fs.impl.io.FolderArtifactHandler;
 import org.apache.jackrabbit.vault.fs.impl.io.GenericArtifactHandler;
 import org.apache.jackrabbit.vault.fs.impl.io.ImportInfoImpl;
 import org.apache.jackrabbit.vault.fs.impl.io.InputSourceArtifact;
+import org.apache.jackrabbit.vault.fs.impl.io.VersionsArtifactHandler;
 import org.apache.jackrabbit.vault.fs.impl.io.XmlAnalyzer;
 import org.apache.jackrabbit.vault.fs.spi.ACLManagement;
 import org.apache.jackrabbit.vault.fs.spi.CNDReader;
@@ -193,6 +194,8 @@ public class Importer {
      * overall handler for importing file artifacts
      */
     private final FileArtifactHandler fileHandler = new FileArtifactHandler();
+
+//    private final VersionsArtifactHandler versionsHandler = new VersionsArtifactHandler();
 
     /**
      * list of archive entries that are detected as lowlevel patches and need to be copied to the
@@ -352,6 +355,7 @@ public class Importer {
             opts.setAccessControlHandling(AccessControlHandling.IGNORE);
         }
         fileHandler.setAcHandling(opts.getAccessControlHandling());
+//        versionsHandler.setAcHandling(opts.getAccessControlHandling());
         genericHandler.setAcHandling(opts.getAccessControlHandling());
         folderHandler.setAcHandling(opts.getAccessControlHandling());
 
@@ -642,6 +646,17 @@ public class Importer {
                             archive.getInputSource(contentXml),
                             SerializationType.XML_DOCVIEW
                     ));
+                    Archive.Entry versionsXml = file.getChild(Constants.DOT_VERSIONS_XML);
+                    if (versionsXml != null) {
+                        info.artifacts.add(new InputSourceArtifact(
+                                parent,
+                                Constants.DOT_VERSIONS_XML,
+                                "",
+                                ArtifactType.VERSIONS,
+                                archive.getInputSource(versionsXml),
+                                SerializationType.XML_GENERIC
+                        ));
+                    }
                 } else {
                     // this is an empty directory and potential intermediate
                     info.isIntermediate = 1;
@@ -661,6 +676,9 @@ public class Importer {
                 String repoName = PlatformNameFormat.getRepositoryName(fileName);
                 String repoPath = parentInfo.path + "/" + repoName;
                 if (file.getName().equals(Constants.DOT_CONTENT_XML)) {
+                    continue;
+                }
+                if (file.getName().equals(Constants.DOT_VERSIONS_XML)) {
                     continue;
                 }
                 if (opts.getPatchDirectory() != null && repoPath.startsWith(opts.getPatchParentPath())) {
@@ -945,6 +963,17 @@ public class Importer {
                     throw new IllegalStateException("file handler did not accept " + info.path);
                 }
             }
+//        } else if (info.artifacts.size(ArtifactType.VERSIONS) > 0) {
+//            Node node = info.getParentNode(session);
+//            if (node == null) {
+//                imp = new ImportInfoImpl();
+//                imp.onError(info.path, new IllegalStateException("Parent node not found."));
+//            } else {
+//                imp = versionsHandler.accept(filter, node, info.name,  info.artifacts);
+//                if (imp == null) {
+//                    throw new IllegalStateException("versions handler did not accept " + info.path);
+//                }
+//            }
         } else {
             throw new UnsupportedOperationException("ArtifactSet not supported: " + info.artifacts);
         }
