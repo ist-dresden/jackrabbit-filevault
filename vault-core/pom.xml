@@ -60,7 +60,7 @@
                 <groupId>org.apache.sling</groupId>
                 <artifactId>maven-sling-plugin</artifactId>
                 <configuration>
-                    <slingUrlSuffix>/libs/system/install/</slingUrlSuffix>
+                    <!--<slingUrlSuffix>/libs/system/install/</slingUrlSuffix>-->
                 </configuration>
             </plugin>
             <plugin>
@@ -206,7 +206,13 @@
             <groupId>org.apache.jackrabbit</groupId>
             <artifactId>oak-jcr</artifactId>
             <version>${oak.version}</version>
-            <scope>test</scope>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jackrabbit</groupId>
+            <artifactId>oak-core</artifactId>
+            <version>${oak.version}</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>
