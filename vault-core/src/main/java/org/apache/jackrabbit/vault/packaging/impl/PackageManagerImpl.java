@@ -121,9 +121,10 @@ public class PackageManagerImpl implements PackageManager {
             }
         }
 
-        VaultFileSystem jcrfs = Mounter.mount(config, metaInf.getFilter(), addr, opts.getRootPath(), s);
+        VaultFileSystem jcrfs = Mounter.mount(config, metaInf.getFilter(), addr, opts.getRootPath(), s, opts.isIncludeVersions());
         JarExporter exporter = new JarExporter(out);
         exporter.setProperties(metaInf.getProperties());
+        exporter.setIncludeVersions(opts.isIncludeVersions());
         if (opts.getListener() != null) {
             exporter.setVerbose(opts.getListener());
         }

@@ -110,6 +110,8 @@ public class AggregateImpl implements Aggregate {
      */
     private boolean filterArtifacts;
 
+    private boolean includeVersions;
+
     /**
      * Creates a new root aggregate
      * @param mgr Aggregate manager
@@ -117,7 +119,7 @@ public class AggregateImpl implements Aggregate {
      * @param aggregator aggregator
      * @throws RepositoryException if a error occurs
      */
-    protected AggregateImpl(AggregateManagerImpl mgr, String path, Aggregator aggregator)
+    protected AggregateImpl(AggregateManagerImpl mgr, String path, Aggregator aggregator, boolean includeVersions)
             throws RepositoryException{
         log.debug("Create Root Aggregate {}", path);
         this.mgr = mgr;
@@ -125,6 +127,12 @@ public class AggregateImpl implements Aggregate {
         this.path = path.equals("/") ? "" : path;
         this.aggregator = aggregator;
         this.useBinaryReferences = "true".equals(mgr.getConfig().getProperty(VaultFsConfig.NAME_USE_BINARY_REFERENCES));
+        this.includeVersions = includeVersions;
+    }
+
+    protected AggregateImpl(AggregateManagerImpl mgr, String path, Aggregator aggregator)
+            throws RepositoryException{
+        this(mgr, path, aggregator, false);
     }
 
     /**
@@ -141,6 +149,7 @@ public class AggregateImpl implements Aggregate {
         this.parent = parent;
         this.path = path;
         this.aggregator = aggregator;
+        this.includeVersions = parent.includeVersions;
         this.useBinaryReferences = "true".equals(mgr.getConfig().getProperty(VaultFsConfig.NAME_USE_BINARY_REFERENCES));
         // if we have a full coverage aggregator, consider this already collected
         mgr.onAggregateCreated();
@@ -740,4 +749,11 @@ public class AggregateImpl implements Aggregate {
         }
     }
 
+    public void setIncludeVersions(boolean includeVersions) {
+        this.includeVersions = includeVersions;
+    }
+
+    public boolean includeVersions() {
+        return includeVersions;
+    }
 }

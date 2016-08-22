@@ -35,6 +35,8 @@ public class ExportOptions {
 
     private String mountPath;
 
+    private boolean includeVersions;
+
     /**
      * Returns the progress tracker listener.
      * @return the progress tracker listener.
@@ -121,5 +123,13 @@ public class ExportOptions {
      */
     public void setMountPath(String mountPath) {
         this.mountPath = mountPath;
+    }
+
+    public boolean isIncludeVersions() {
+        return includeVersions;
+    }
+
+    public void setIncludeVersions(boolean includeVersions) {
+        this.includeVersions = includeVersions;
     }
 }

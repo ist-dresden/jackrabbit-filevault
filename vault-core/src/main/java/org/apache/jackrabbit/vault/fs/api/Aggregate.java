@@ -107,4 +107,6 @@ public interface Aggregate extends Dumpable {
      * @return the binaries or <code>null</code>
      */
     Collection<Property> getBinaries();
+
+    boolean includeVersions();
 }

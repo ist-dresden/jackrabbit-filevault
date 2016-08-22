@@ -156,6 +156,14 @@ public class AggregateManagerImpl implements AggregateManager {
                                          RepositoryAddress mountpoint,
                                          Session session)
             throws RepositoryException {
+        return mount(config, wspFilter, mountpoint, session, false);
+    }
+
+    public static AggregateManager mount(VaultFsConfig config,
+                                         WorkspaceFilter wspFilter,
+                                         RepositoryAddress mountpoint,
+                                         Session session, boolean includeVersions)
+            throws RepositoryException {
         assert mountpoint.getWorkspace().equals(session.getWorkspace().getName());
         if (config == null) {
             config = getDefaultConfig();
@@ -164,7 +172,7 @@ public class AggregateManagerImpl implements AggregateManager {
             wspFilter = getDefaultWorkspaceFilter();
         }
         Node rootNode = session.getNode(mountpoint.getPath());
-        return new AggregateManagerImpl(config, wspFilter, mountpoint, rootNode, false);
+        return new AggregateManagerImpl(config, wspFilter, mountpoint, rootNode, false, includeVersions);
     }
 
     /**
@@ -185,7 +193,16 @@ public class AggregateManagerImpl implements AggregateManager {
                                          Repository rep,
                                          Credentials credentials,
                                          RepositoryAddress mountpoint)
-    throws RepositoryException {
+        throws RepositoryException {
+        return mount(config, wspFilter, rep, credentials, mountpoint, false);
+    }
+
+    public static AggregateManager mount(VaultFsConfig config,
+                                         WorkspaceFilter wspFilter,
+                                         Repository rep,
+                                         Credentials credentials,
+                                         RepositoryAddress mountpoint, boolean includeVersions)
+        throws RepositoryException {
         if (config == null) {
             config = getDefaultConfig();
         }
@@ -205,7 +222,7 @@ public class AggregateManagerImpl implements AggregateManager {
                 throw e;
             }
         }
-        return new AggregateManagerImpl(config, wspFilter, mountpoint, rootNode, true);
+        return new AggregateManagerImpl(config, wspFilter, mountpoint, rootNode, true, includeVersions);
     }
 
     /**
@@ -296,8 +313,15 @@ public class AggregateManagerImpl implements AggregateManager {
      * @throws RepositoryException if an error occurs.
      */
     private AggregateManagerImpl(VaultFsConfig config, WorkspaceFilter wspFilter,
+                                 RepositoryAddress mountpoint, Node rootNode,
+                                 boolean ownSession)
+            throws RepositoryException {
+        this(config, wspFilter, mountpoint, rootNode, ownSession, false);
+    }
+
+    private AggregateManagerImpl(VaultFsConfig config, WorkspaceFilter wspFilter,
                              RepositoryAddress mountpoint, Node rootNode,
-                             boolean ownSession)
+                             boolean ownSession, boolean includeVersions)
             throws RepositoryException {
         session = rootNode.getSession();
         this.mountpoint = mountpoint;
@@ -311,7 +335,7 @@ public class AggregateManagerImpl implements AggregateManager {
         Aggregator rootAggregator = rootNode.getDepth() == 0
                 ? new RootAggregator()
                 : getAggregator(rootNode, null);
-        root = new AggregateImpl(this, rootNode.getPath(), rootAggregator);
+        root = new AggregateImpl(this, rootNode.getPath(), rootAggregator, includeVersions);
 
         // setup node types
         initNodeTypes();

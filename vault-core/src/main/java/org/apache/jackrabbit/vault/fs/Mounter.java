@@ -58,9 +58,17 @@ public final class Mounter {
                                       String rootPath,
                                       Session session)
             throws RepositoryException, IOException {
+        return mount(config, wspFilter, mountpoint, rootPath, session, false);
+    }
+    public static VaultFileSystem mount(VaultFsConfig config,
+                                      WorkspaceFilter wspFilter,
+                                      RepositoryAddress mountpoint,
+                                      String rootPath,
+                                      Session session, boolean includeVersions)
+            throws RepositoryException, IOException {
         return new VaultFileSystemImpl(
                 AggregateManagerImpl.mount(
-                        config, wspFilter, mountpoint, session
+                        config, wspFilter, mountpoint, session, includeVersions
                 ).getRoot(),
                 rootPath,
                 true
@@ -89,9 +97,19 @@ public final class Mounter {
                                       RepositoryAddress mountpoint,
                                       String rootPath)
     throws RepositoryException, IOException {
+        return mount(config, wspFilter, rep, credentials, mountpoint, rootPath, false);
+    }
+
+    public static VaultFileSystem mount(VaultFsConfig config,
+                                      WorkspaceFilter wspFilter,
+                                      Repository rep,
+                                      Credentials credentials,
+                                      RepositoryAddress mountpoint,
+                                      String rootPath, boolean includeVersions)
+    throws RepositoryException, IOException {
         return new VaultFileSystemImpl(
                 AggregateManagerImpl.mount(config, wspFilter, rep, credentials,
-                        mountpoint).getRoot(),
+                        mountpoint, includeVersions).getRoot(),
                 rootPath, true);
     }
 

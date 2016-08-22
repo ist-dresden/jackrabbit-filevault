@@ -467,6 +467,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         opts.setMetaInf(def.getMetaInf());
         opts.setListener(listener);
         opts.setPostProcessor(def.getInjectProcessor());
+        opts.setIncludeVersions(def.getBoolean("includeVersions"));
 
         VaultPackage pack = assemble(packNode.getSession(), opts, (File) null);
 

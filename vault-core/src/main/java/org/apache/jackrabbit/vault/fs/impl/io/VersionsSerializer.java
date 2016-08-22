@@ -1,6 +1,7 @@
 package org.apache.jackrabbit.vault.fs.impl.io;
 
 import org.apache.jackrabbit.util.Base64;
+import org.apache.jackrabbit.util.ISO9075;
 import org.apache.jackrabbit.vault.fs.api.Aggregate;
 import org.apache.jackrabbit.vault.fs.api.SerializationType;
 import org.apache.jackrabbit.vault.fs.impl.AggregateImpl;
@@ -83,13 +84,15 @@ public class VersionsSerializer implements Serializer {
         AttributesImpl pattrs = new AttributesImpl();
         while (properties.hasNext()) {
             final Property property = properties.nextProperty();
+            final String propertyName = property.getName();
+            final String encodedPropertyName = ISO9075.encode(propertyName);
             if (property.getType() == PropertyType.BINARY) {
                 final Binary binary = property.getBinary();
                 StringWriter writer = new StringWriter();
                 Base64.encode(binary.getStream(), writer);
-                pattrs.addAttribute("", property.getName(), "", "CDATA", "{Binary}" + writer.toString());
+                pattrs.addAttribute("", encodedPropertyName, "", "CDATA", "{Binary}" + writer.toString());
             } else {
-                pattrs.addAttribute("", property.getName(), "", "CDATA", DocViewProperty.format(property));
+                pattrs.addAttribute("", encodedPropertyName, "", "CDATA", DocViewProperty.format(property));
             }
         }
         pattrs.addAttribute(VAULT_NS_URI, "nodename", "", "CDATA", node.getName());

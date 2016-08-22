@@ -48,6 +48,8 @@ public class JarExporter extends AbstractExporter {
 
     private File jarFile;
 
+    private boolean includeVersions;
+
     /**
      * Constructs a new jar exporter that writes to the given file.
      * @param jarFile the jar file
@@ -157,4 +159,11 @@ public class JarExporter extends AbstractExporter {
     }
 
 
+    public void setIncludeVersions(boolean includeVersions) {
+        this.includeVersions = includeVersions;
+    }
+
+    public boolean isIncludeVersions() {
+        return includeVersions;
+    }
 }

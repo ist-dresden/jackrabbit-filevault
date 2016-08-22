@@ -4,13 +4,13 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Type;
-import org.apache.jackrabbit.oak.plugins.identifier.IdentifierManager;
 import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
 import org.apache.jackrabbit.spi.Name;
 import org.apache.jackrabbit.spi.commons.namespace.NamespaceResolver;
-import org.apache.jackrabbit.util.ISO8601;
+import org.apache.jackrabbit.util.ISO9075;
 import org.apache.jackrabbit.vault.util.DocViewProperty;
 import org.apache.jackrabbit.vault.util.RejectingEntityDefaultHandler;
 import org.xml.sax.Attributes;
@@ -58,6 +58,11 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
     public VersionsSAXImporter(Node parentNode) throws RepositoryException {
         this.parentNode = parentNode;
         this.session = parentNode.getSession();
+        try {
+            setUserData("import");
+        } catch (Exception e) {
+            throw new RepositoryException(e);
+        }
     }
 
     /**
@@ -86,7 +91,7 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
         if (uri.equals(VAULT_NS_URI) && localName.equals("versions")) {
             final String path = attributes.getValue("", "path");
-            System.out.println(path);
+            //todo: default-property
         }
         if (uri.equals(NT) && localName.equals("versionHistory")) {
             final String nodename = attributes.getValue(VAULT_NS_URI, "nodename");
@@ -95,10 +100,7 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
                 final NodeBuilder n1nb = buildIntermediateNode(jcrVersionStorage, nodename.substring(0, 2));
                 final NodeBuilder n2nb = buildIntermediateNode(n1nb, nodename.substring(2, 4));
                 final NodeBuilder n3nb = buildIntermediateNode(n2nb, nodename.substring(4, 6));
-                currentVersionHistoryNode = createVersionHistoryNode(n3nb, /*nodename*/ "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeee");
-//                if (currentVersionHistoryNode!=null) {
-//                    createRootVersion(currentVersionHistoryNode);
-//                }
+                currentVersionHistoryNode = createVersionHistoryNode(n3nb, nodename, attributes.getValue(JCR_UUID));
             } catch (Exception e) {
                 throw new SAXException(e);
             }
@@ -111,7 +113,7 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
                 for (int i = 0; i<attributes.getLength();i++) {
                     final String attributeQName = attributes.getQName(i);
                     if (!attributeQName.equals("vlt:nodename") && !attributeQName.equals("jcr:primaryType")) {
-                        versionLabel.setProperty(attributeQName, attributes.getValue(i).substring(11), Type.REFERENCE);
+                        versionLabel.setProperty(ISO9075.decode(attributeQName), attributes.getValue(i).substring(11), Type.REFERENCE);
                     }
                 }
             }
@@ -119,7 +121,7 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
         }
         if (uri.equals(NT) && localName.equals("version")) {
             final String nodename = attributes.getValue(VAULT_NS_URI, "nodename");
-            final String uuid = "a"+attributes.getValue(JCR_UUID).substring(1); //FIXME
+            final String uuid = attributes.getValue(JCR_UUID);
             final String created = attributes.getValue(JCR_CREATED).substring(6);
             String predecessors = attributes.getValue(JCR_PREDECESSORS).substring(11);
             String successors = attributes.getValue(JCR_SUCCESSORS).substring(11);
@@ -142,10 +144,10 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
     private NodeBuilder createNode(NodeBuilder parent, String nodename, Attributes attributes) {
         final NodeBuilder node = parent.child(nodename);
         for (int x = 0; x < attributes.getLength(); x++) {
-            final String qName = attributes.getQName(x);
+            final String qName = ISO9075.decode(attributes.getQName(x));
             final String value = attributes.getValue(x);
             if (qName.equals(JCR_UUID)) {
-                final String uuid = "abc"+attributes.getValue(JCR_UUID).substring(3); //FIXME
+                final String uuid = attributes.getValue(JCR_UUID);
                 node.setProperty(JCR_UUID, uuid, Type.STRING);
             } else if (qName.equals(JCR_PRIMARYTYPE)) {
                 final String jcrPrimaryType = attributes.getValue(JCR_PRIMARYTYPE);
@@ -312,8 +314,6 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
             }
 
         }
-        System.out.println();
-
         return node;
     }
 
@@ -325,15 +325,36 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
         return child;
     }
 
-    private NodeBuilder createVersionHistoryNode(NodeBuilder n3nb, String versionableUuid) {
-        final NodeBuilder versionHistoryNode = n3nb.child(versionableUuid);
+    private NodeBuilder createVersionHistoryNode(NodeBuilder n3nb, String versionableUuid, String uuid) throws RepositoryException {
+        NodeBuilder versionHistoryNode = n3nb.child(versionableUuid);
 
-//        versionHistoryNode.remove();
-//        return null;
-//
+        if (!versionHistoryNode.isNew()) {
+            final Iterable<String> childNodeNames = versionHistoryNode.getChildNodeNames();
+            for (String childNodeName: childNodeNames) {
+                if (childNodeName.equals("jcr:versionLabels")) {
+                    final NodeBuilder versionLabels = versionHistoryNode.getChildNode(childNodeName);
+                    final Iterable<? extends PropertyState> properties = versionLabels.getProperties();
+                    for (PropertyState property : properties) {
+                        final Type<?> type = property.getType();
+                        if (type == Type.REFERENCE) {
+                            versionLabels.removeProperty(property.getName());
+                        }
+                    }
+                } else if (childNodeName.equals("jcr:rootVersion")) {
+                    final NodeBuilder rootVersion = versionHistoryNode.getChildNode(childNodeName);
+                    final NodeBuilder frozenNode = rootVersion.getChildNode("jcr:frozenNode");
+                    frozenNode.setProperty("jcr:frozenUuid", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeee", Type.STRING); // FIXME??
+                } else {
+                    final NodeBuilder childNode = versionHistoryNode.getChildNode(childNodeName);
+                    childNode.remove();
+                }
+            }
+        }
+
         versionHistoryNode.setProperty(JCR_PRIMARYTYPE, NT_VERSIONHISTORY, Type.NAME);
+        versionHistoryNode.setProperty(JCR_MIXINTYPES, Arrays.asList("rep:VersionablePaths"), Type.NAMES);
         versionHistoryNode.setProperty("jcr:versionableUuid", versionableUuid, Type.STRING);
-        versionHistoryNode.setProperty(JCR_UUID, IdentifierManager.generateUUID(), Type.STRING);
+        versionHistoryNode.setProperty(JCR_UUID, uuid, Type.STRING);
         return versionHistoryNode;
     }
 
@@ -399,12 +420,17 @@ public class VersionsSAXImporter extends RejectingEntityDefaultHandler implement
     @Override
     public void endDocument() throws SAXException {
         try {
-            final Object sessionDelegate = getFieldValue(session, "sd");
-            callMethod(sessionDelegate, "setUserData", "import");
+            setUserData("import");
             session.save();
+            setUserData("");
         } catch (Exception e) {
             throw new SAXException(e);
         }
+    }
+
+    private void setUserData(String data) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        final Object sessionDelegate = getFieldValue(session, "sd");
+        callMethod(sessionDelegate, "setUserData", data);
     }
 }
 
