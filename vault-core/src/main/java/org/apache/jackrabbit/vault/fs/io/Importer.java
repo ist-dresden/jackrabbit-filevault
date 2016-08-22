@@ -194,8 +194,6 @@ public class Importer {
      */
     private final FileArtifactHandler fileHandler = new FileArtifactHandler();
 
-//    private final VersionsArtifactHandler versionsHandler = new VersionsArtifactHandler();
-
     /**
      * list of archive entries that are detected as lowlevel patches and need to be copied to the
      * filesystem after import.
@@ -354,7 +352,6 @@ public class Importer {
             opts.setAccessControlHandling(AccessControlHandling.IGNORE);
         }
         fileHandler.setAcHandling(opts.getAccessControlHandling());
-//        versionsHandler.setAcHandling(opts.getAccessControlHandling());
         genericHandler.setAcHandling(opts.getAccessControlHandling());
         folderHandler.setAcHandling(opts.getAccessControlHandling());
 
@@ -962,17 +959,6 @@ public class Importer {
                     throw new IllegalStateException("file handler did not accept " + info.path);
                 }
             }
-//        } else if (info.artifacts.size(ArtifactType.VERSIONS) > 0) {
-//            Node node = info.getParentNode(session);
-//            if (node == null) {
-//                imp = new ImportInfoImpl();
-//                imp.onError(info.path, new IllegalStateException("Parent node not found."));
-//            } else {
-//                imp = versionsHandler.accept(filter, node, info.name,  info.artifacts);
-//                if (imp == null) {
-//                    throw new IllegalStateException("versions handler did not accept " + info.path);
-//                }
-//            }
         } else {
             throw new UnsupportedOperationException("ArtifactSet not supported: " + info.artifacts);
         }
