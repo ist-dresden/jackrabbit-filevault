@@ -31,7 +31,7 @@
     <!-- ====================================================================== -->
     <groupId>org.apache.jackrabbit.vault</groupId>
     <artifactId>parent</artifactId>
-    <version>3.1.27-SNAPSHOT</version>
+    <version>3.1.27-20160902</version>
     <packaging>pom</packaging>
 
     <name>Apache Jackrabbit FileVault (Parent Project)</name>
@@ -53,6 +53,17 @@
         <developerConnection>scm:svn:https://svn.apache.org/repos/asf/jackrabbit/commons/filevault/trunk/parent</developerConnection>
         <url>http://svn.apache.org/viewvc/asf/jackrabbit/commons/filevault/trunk/parent</url>
     </scm>
+
+    <distributionManagement>
+        <repository>
+            <id>archiva</id>
+            <url>https://build.ist-software.com/archiva/repository/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>archiva</id>
+            <url>https://build.ist-software.com/archiva/repository/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <mailingLists>
 
