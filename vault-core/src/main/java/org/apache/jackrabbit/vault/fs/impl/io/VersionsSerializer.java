@@ -36,9 +36,11 @@ import static org.apache.jackrabbit.vault.util.Constants.VAULT_NS_URI;
 public class VersionsSerializer implements Serializer {
 
     private final AggregateImpl aggregate;
+    private final boolean isContent;
 
-    public VersionsSerializer(Aggregate aggregate) {
+    public VersionsSerializer(Aggregate aggregate, boolean isContent) {
         this.aggregate = (AggregateImpl) aggregate;
+        this.isContent = isContent;
     }
 
     @Override
@@ -46,7 +48,13 @@ public class VersionsSerializer implements Serializer {
         final Session session = aggregate.getNode().getSession();
         final Workspace workspace = session.getWorkspace();
         final VersionManager versionManager = workspace.getVersionManager();
-        final VersionHistory versionHistory = versionManager.getVersionHistory(aggregate.getNode().getPath());
+        final Node node;
+        if (isContent) {
+            node = aggregate.getNode().getNode("jcr:content");
+        } else {
+            node = aggregate.getNode();
+        }
+        final VersionHistory versionHistory = versionManager.getVersionHistory(node.getPath());
 
         OutputFormat oFmt = new OutputFormat("xml", "UTF-8", true);
         oFmt.setIndent(4);
