@@ -38,7 +38,7 @@ public class VersionAggregatorDecorator extends AggregatorDecorator {
             final SerializerArtifact versions;
             if (contentIsVersionable(aggregate)) {
                 Serializer ser = new VersionsSerializer(aggregate, true);
-                versions = new SerializerArtifact(directory, "_jcr_content", DOT_VERSIONS_XML, ArtifactType.VERSIONS, ser, 0);
+                versions = new SerializerArtifact(directory, "jcr:content/", DOT_VERSIONS_XML, ArtifactType.VERSIONS, ser, 0);
             } else {
                 Serializer ser = new VersionsSerializer(aggregate, false);
                 versions = new SerializerArtifact(directory, "", DOT_VERSIONS_XML, ArtifactType.VERSIONS, ser, 0);

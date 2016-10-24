@@ -24,14 +24,20 @@ import java.util.Set;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.RepositoryException;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.jackrabbit.vault.fs.api.Artifact;
 import org.apache.jackrabbit.vault.fs.api.ArtifactType;
 import org.apache.jackrabbit.vault.fs.api.ImportMode;
+import org.apache.jackrabbit.vault.fs.api.SerializationType;
+import org.apache.jackrabbit.vault.fs.api.VaultInputSource;
 import org.apache.jackrabbit.vault.fs.api.WorkspaceFilter;
 import org.apache.jackrabbit.vault.fs.impl.ArtifactSetImpl;
 import org.apache.jackrabbit.vault.fs.io.AccessControlHandling;
 import org.apache.jackrabbit.vault.util.JcrConstants;
+import org.xml.sax.SAXException;
 
 /**
  * Handles artifact sets with just a directory.
@@ -69,7 +75,8 @@ public class FolderArtifactHandler extends AbstractArtifactHandler {
                              ArtifactSetImpl artifacts)
             throws RepositoryException, IOException {
         Artifact dir = artifacts.getDirectory();
-        if (dir == null || artifacts.size() != 1) {
+        final Artifact versions = artifacts.getVersionsData();
+        if (dir == null || (artifacts.size() != 1 && versions == null)) {
             return null;
         }
         ImportInfoImpl info = new ImportInfoImpl();
@@ -80,6 +87,23 @@ public class FolderArtifactHandler extends AbstractArtifactHandler {
         if (!parent.hasNode(dir.getRelativePath())) {
             Node node = parent.addNode(dir.getRelativePath(), nodeType);
             info.onCreated(node.getPath());
+        } else if (versions != null) {
+            // import versions
+            final VaultInputSource inputSource = versions.getInputSource();
+            if (inputSource != null && versions.getSerializationType() == SerializationType.XML_GENERIC) {
+                try {
+                    VersionsSAXImporter handler = new VersionsSAXImporter(parent);
+                    SAXParserFactory factory = SAXParserFactory.newInstance();
+                    factory.setNamespaceAware(true);
+                    factory.setFeature("http://xml.org/sax/features/namespace-prefixes", false);
+                    SAXParser parser = factory.newSAXParser();
+                    parser.parse(inputSource, handler);
+                } catch (ParserConfigurationException e) {
+                    throw new RepositoryException(e);
+                } catch (SAXException e) {
+                    throw new IOException(e);
+                }
+            }
         } else {
             // sync nodes
             Set<String> hints = new HashSet<String>();

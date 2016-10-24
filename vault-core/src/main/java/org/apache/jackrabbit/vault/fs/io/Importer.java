@@ -629,6 +629,7 @@ public class Importer {
                 info.artifacts.add(parent);
 
                 Archive.Entry contentXml = file.getChild(Constants.DOT_CONTENT_XML);
+                Archive.Entry versionsXml = file.getChild(Constants.DOT_VERSIONS_XML);
                 if (contentXml != null) {
                     if (contentXml.isDirectory()) {
                         throw new IllegalArgumentException(Constants.DOT_CONTENT_XML + " is not a file");
@@ -642,7 +643,6 @@ public class Importer {
                             archive.getInputSource(contentXml),
                             SerializationType.XML_DOCVIEW
                     ));
-                    Archive.Entry versionsXml = file.getChild(Constants.DOT_VERSIONS_XML);
                     if (versionsXml != null) {
                         info.artifacts.add(new InputSourceArtifact(
                                 parent,
@@ -653,6 +653,15 @@ public class Importer {
                                 SerializationType.XML_GENERIC
                         ));
                     }
+                } else if (versionsXml != null) {
+                    info.artifacts.add(new InputSourceArtifact(
+                            parent,
+                            Constants.DOT_VERSIONS_XML,
+                            "",
+                            ArtifactType.VERSIONS,
+                            archive.getInputSource(versionsXml),
+                            SerializationType.XML_GENERIC
+                    ));
                 } else {
                     // this is an empty directory and potential intermediate
                     info.isIntermediate = 1;

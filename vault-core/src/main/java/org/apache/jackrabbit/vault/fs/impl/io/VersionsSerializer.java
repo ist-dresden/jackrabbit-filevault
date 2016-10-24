@@ -72,6 +72,12 @@ public class VersionsSerializer implements Serializer {
             ser.endPrefixMapping("nt");
             ser.startPrefixMapping("vlt", VAULT_NS_URI);
             ser.endPrefixMapping("vlt");
+            final String[] namespacePrefixes = aggregate.getNamespacePrefixes();
+            for (String prefix : namespacePrefixes) {
+                final String namespaceURI = aggregate.getNamespaceURI(prefix);
+                ser.startPrefixMapping(prefix, namespaceURI);
+                ser.endPrefixMapping(prefix);
+            }
 
             AttributesImpl attrs = new AttributesImpl();
             attrs.addAttribute(VAULT_NS_URI, "path", "", "CDATA", aggregate.getPath());
