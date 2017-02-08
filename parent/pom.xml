@@ -31,7 +31,7 @@
     <!-- ====================================================================== -->
     <groupId>org.apache.jackrabbit.vault</groupId>
     <artifactId>parent</artifactId>
-    <version>3.1.27-20160902</version>
+    <version>3.1.34-VERSIONS</version>
     <packaging>pom</packaging>
 
     <name>Apache Jackrabbit FileVault (Parent Project)</name>
@@ -40,18 +40,24 @@
     </description>
 
     <properties>
-        <jackrabbit.version>2.11.3</jackrabbit.version>
-        <oak.version>1.3.7</oak.version>
-        <!--<oak.version>1.3.14</oak.version>-->
+        <jackrabbit.version>2.13.7</jackrabbit.version>
+        <oak.version>1.5.9</oak.version>
+        <sling.scheme>http</sling.scheme>
+        <sling.secure>false</sling.secure>
+        <sling.host>localhost</sling.host>
+        <sling.port>9090</sling.port>
+        <sling.context></sling.context>
+        <sling.user>admin</sling.user>
+        <sling.password>admin</sling.password>
     </properties>
 
     <!-- ====================================================================== -->
     <!-- S C M  D E F I N I T I O N                                             -->
     <!-- ====================================================================== -->
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/jackrabbit/commons/filevault/trunk/parent</connection>
-        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/jackrabbit/commons/filevault/trunk/parent</developerConnection>
-        <url>http://svn.apache.org/viewvc/asf/jackrabbit/commons/filevault/trunk/parent</url>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/jackrabbit/commons/filevault/tags/jackrabbit-filevault-3.1.34/parent</connection>
+        <developerConnection>scm:svn:https://svn.apache.org/repos/asf/jackrabbit/commons/filevault/tags/jackrabbit-filevault-3.1.34/parent</developerConnection>
+        <url>http://svn.apache.org/viewvc/asf/jackrabbit/commons/filevault/tags/jackrabbit-filevault-3.1.34/parent</url>
     </scm>
 
     <distributionManagement>
@@ -100,8 +106,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <debug>true</debug>
                     <showDeprecation>false</showDeprecation>
                     <showWarnings>true</showWarnings>
@@ -141,14 +147,11 @@
                     <artifactId>maven-sling-plugin</artifactId>
                     <version>2.1.8</version>
                     <configuration>
-                        <!--<slingUrl>http://localhost:3030</slingUrl>-->
-                        <slingUrl>http://localhost:9090</slingUrl>
-                        <!--<slingUrl>http://localhost:4502</slingUrl>-->
+                        <slingUrl>${sling.scheme}://${sling.host}:${sling.port}${sling.context}</slingUrl>
                         <slingUrlSuffix>/system/console/install</slingUrlSuffix>
-                        <!--<slingUrlSuffix>/libs/system/install</slingUrlSuffix>-->
-                        <!--<usePut>true</usePut>-->
-                        <user>admin</user>
-                        <password>admin</password>
+                        <user>${sling.user}</user>
+                        <password>${sling.password}</password>
+                        <failOnError>true</failOnError>
                     </configuration>
                 </plugin>
                 <!-- ====================================================================== -->
@@ -157,8 +160,42 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>2.4.0</version>
+                    <version>3.0.1</version>
                     <inherited>true</inherited>
+                    <configuration>
+                        <outputDirectory>${basedir}/target/classes</outputDirectory>
+                        <obrRepository>NONE</obrRepository>
+                        <instructions>
+                            <Bundle-Category>jackrabbit</Bundle-Category>
+                            <Bundle-DocURL>http://jackrabbit.apache.org/filevault/</Bundle-DocURL>
+                            <Bundle-Vendor>The Apache Software Foundation</Bundle-Vendor>
+                            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                            <_provider-policy>[$(version;===;$(@)),$(version;=+;$(@)))</_provider-policy>
+                            <_consumer-policy>[$(version;===;$(@)),$(version;+;$(@)))</_consumer-policy>
+                            <_removeheaders>
+                                ReleaseRepository-Id,
+                                ReleaseRepository-Name,
+                                ReleaseRepository-URL,
+                                SnapshotRepository-Id,
+                                SnapshotRepository-Name,
+                                SnapshotRepository-URL,
+                                Include-Resource,
+                                Private-Package
+                            </_removeheaders>
+                        </instructions>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>baseline</id>
+                            <goals>
+                                <goal>baseline</goal>
+                            </goals>
+                            <configuration>
+                                <failOnError>false</failOnError>
+                                <comparisonVersion>3.1.30</comparisonVersion>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <!-- ====================================================================== -->
                 <!-- S U R E F I R E   P L U G I N                                          -->
@@ -198,6 +235,7 @@
                             <exclude>.idea/**</exclude>
                             <exclude>.gitignore</exclude>
                             <exclude>derby.log</exclude>
+                            <exclude>**/*.zip/**</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
@@ -326,6 +364,12 @@
                 <version>1.2.12</version>
                 <scope>provided</scope>
             </dependency>
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>2.0.2</version>
+                <scope>provided</scope>
+            </dependency>
 
             <!-- other -->
             <!-- osgi stuff -->
@@ -348,12 +392,12 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.2</version>
+                <version>1.10</version>
             </dependency>
             <dependency>
-                <groupId>commons-httpclient</groupId>
-                <artifactId>commons-httpclient</artifactId>
-                <version>3.0</version>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpmime</artifactId>
+                <version>4.5.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
@@ -363,7 +407,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.8.2</version>
+                <version>4.12</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
