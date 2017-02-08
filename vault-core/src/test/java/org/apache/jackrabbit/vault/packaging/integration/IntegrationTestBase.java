@@ -21,10 +21,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -43,8 +46,11 @@ import javax.jcr.security.Privilege;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.jackrabbit.api.JackrabbitSession;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlEntry;
 import org.apache.jackrabbit.api.security.JackrabbitAccessControlList;
+import org.apache.jackrabbit.api.security.user.Authorizable;
+import org.apache.jackrabbit.api.security.user.UserManager;
 import org.apache.jackrabbit.commons.jackrabbit.authorization.AccessControlUtils;
 import org.apache.jackrabbit.core.RepositoryImpl;
 import org.apache.jackrabbit.core.config.RepositoryConfig;
@@ -55,6 +61,7 @@ import org.apache.jackrabbit.oak.jcr.Jcr;
 import org.apache.jackrabbit.oak.plugins.blob.datastore.DataStoreBlobStore;
 import org.apache.jackrabbit.oak.plugins.segment.SegmentNodeStore;
 import org.apache.jackrabbit.oak.plugins.segment.file.FileStore;
+import org.apache.jackrabbit.oak.plugins.segment.file.InvalidFileStoreVersionException;
 import org.apache.jackrabbit.oak.security.SecurityProviderImpl;
 import org.apache.jackrabbit.oak.security.user.RandomAuthorizableNodeName;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
@@ -68,14 +75,21 @@ import org.apache.jackrabbit.oak.spi.security.user.action.AccessControlAction;
 import org.apache.jackrabbit.oak.spi.xml.ImportBehavior;
 import org.apache.jackrabbit.oak.spi.xml.ProtectedItemImporter;
 import org.apache.jackrabbit.vault.fs.api.ProgressTrackerListener;
+import org.apache.jackrabbit.vault.fs.io.FileArchive;
 import org.apache.jackrabbit.vault.fs.io.ImportOptions;
+import org.apache.jackrabbit.vault.packaging.JcrPackage;
 import org.apache.jackrabbit.vault.packaging.JcrPackageManager;
+import org.apache.jackrabbit.vault.packaging.PackageException;
+import org.apache.jackrabbit.vault.packaging.VaultPackage;
+import org.apache.jackrabbit.vault.packaging.events.impl.PackageEventDispatcherImpl;
+import org.apache.jackrabbit.vault.packaging.impl.ActivityLog;
 import org.apache.jackrabbit.vault.packaging.impl.JcrPackageManagerImpl;
+import org.apache.jackrabbit.vault.packaging.impl.ZipVaultPackage;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +102,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * <code>IntegrationTestBase</code>...
+ * {@code IntegrationTestBase}...
  */
 public class IntegrationTestBase  {
 
@@ -102,7 +116,7 @@ public class IntegrationTestBase  {
     private static final File DIR_DATA_STORE = new File(REPO_HOME + "/datastore");
     private static final File DIR_BLOB_STORE = new File(REPO_HOME + "/blobstore");
 
-    @Rule
+    @ClassRule
     public static TemporaryFolder tempFolder = new TemporaryFolder();
 
     private static FileStore fileStore = null;
@@ -111,10 +125,12 @@ public class IntegrationTestBase  {
 
     protected Session admin;
 
-    protected JcrPackageManager packMgr;
+    protected JcrPackageManagerImpl packMgr;
+
+    protected Set<String> preTestAuthorizables;
 
     @BeforeClass
-    public static void initRepository() throws RepositoryException, IOException {
+    public static void initRepository() throws RepositoryException, IOException, InvalidFileStoreVersionException {
         if (isOak()) {
             Properties userProps = new Properties();
             AuthorizableNodeName nameGenerator = new RandomAuthorizableNodeName();
@@ -125,6 +141,7 @@ public class IntegrationTestBase  {
             userProps.put(AccessControlAction.GROUP_PRIVILEGE_NAMES, new String[] {PrivilegeConstants.JCR_READ});
             userProps.put(ProtectedItemImporter.PARAM_IMPORT_BEHAVIOR, ImportBehavior.NAME_BESTEFFORT);
             userProps.put(UserConstants.PARAM_AUTHORIZABLE_NODE_NAME, nameGenerator);
+            userProps.put("cacheExpiration", 3600*1000);
             Properties authzProps = new Properties();
             authzProps.put(ProtectedItemImporter.PARAM_IMPORT_BEHAVIOR, ImportBehavior.NAME_BESTEFFORT);
             Properties securityProps = new Properties();
@@ -135,10 +152,10 @@ public class IntegrationTestBase  {
             if (useFileStore()) {
                 BlobStore blobStore = createBlobStore();
                 DIR_DATA_STORE.mkdirs();
-                fileStore = FileStore.newFileStore(DIR_DATA_STORE)
+                fileStore = FileStore.builder(DIR_DATA_STORE)
                         .withBlobStore(blobStore)
-                        .create();
-                SegmentNodeStore nodeStore = SegmentNodeStore.newSegmentNodeStore(fileStore).create();
+                        .build();
+                SegmentNodeStore nodeStore = SegmentNodeStore.builder(fileStore).build();
                 jcr = new Jcr(nodeStore);
             } else {
                 jcr = new Jcr();
@@ -202,6 +219,31 @@ public class IntegrationTestBase  {
         clean("/testroot");
 
         packMgr = new JcrPackageManagerImpl(admin);
+
+        PackageEventDispatcherImpl dispatcher = new PackageEventDispatcherImpl();
+        dispatcher.bindPackageEventListener(new ActivityLog(), Collections.singletonMap("component.id", (Object) "1234"));
+        packMgr.setDispatcher(dispatcher);
+
+        preTestAuthorizables = getAllAuthorizableIds();
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        // remove test authorizables
+        admin.refresh(false);
+        UserManager mgr = ((JackrabbitSession) admin).getUserManager();
+        for (String id: getAllAuthorizableIds()) {
+            if (!preTestAuthorizables.remove(id)) {
+                removeAuthorizable(mgr, id);
+            }
+        }
+        admin.save();
+
+        packMgr = null;
+        if (admin != null) {
+            admin.logout();
+            admin = null;
+        }
     }
 
     public static boolean isOak() {
@@ -216,12 +258,20 @@ public class IntegrationTestBase  {
             // ignore
         }
     }
-    @After
-    public void tearDown() throws Exception {
-        packMgr = null;
-        if (admin != null) {
-            admin.logout();
-            admin = null;
+    public final Set<String> getAllAuthorizableIds() throws RepositoryException {
+        Set<String> ret = new HashSet<String>();
+        UserManager mgr = ((JackrabbitSession) admin).getUserManager();
+        Iterator<Authorizable> auths = mgr.findAuthorizables("rep:principalName", null);
+        while (auths.hasNext()) {
+            ret.add(auths.next().getID());
+        }
+        return ret;
+    }
+
+    public final void removeAuthorizable(UserManager mgr, String name) throws RepositoryException {
+        Authorizable a = mgr.getAuthorizable(name);
+        if (a != null) {
+            a.remove();
         }
     }
 
@@ -246,6 +296,39 @@ public class IntegrationTestBase  {
         return tmpFile;
     }
 
+    public VaultPackage loadVaultPackage(String name) throws IOException {
+        final URL packageURL = getClass().getResource(name);
+        final String filename = packageURL.getFile();
+        final File file = new File(filename);
+        return new ZipVaultPackage(new FileArchive(file), true);
+    }
+
+    public VaultPackage extractVaultPackage(String name) throws IOException, PackageException, RepositoryException {
+        return extractVaultPackage(name, null);
+    }
+
+    public VaultPackage extractVaultPackage(String name, ImportOptions opts) throws IOException, PackageException, RepositoryException {
+        if (opts == null) {
+            opts = getDefaultOptions();
+        }
+        VaultPackage pack = loadVaultPackage(name);
+        pack.extract(admin, opts);
+        return pack;
+    }
+
+    public JcrPackage installPackage(String name) throws IOException, RepositoryException, PackageException {
+        return installPackage(name, null);
+    }
+
+    public JcrPackage installPackage(String name, ImportOptions opts) throws IOException, RepositoryException, PackageException {
+        if (opts == null) {
+            opts = getDefaultOptions();
+        }
+        JcrPackage pack = packMgr.upload(getStream(name), false);
+        assertNotNull(pack);
+        pack.install(opts);
+        return pack;
+    }
 
     public ImportOptions getDefaultOptions() {
         ImportOptions opts = new ImportOptions();
@@ -272,6 +355,11 @@ public class IntegrationTestBase  {
     public void assertProperty(String path, String value) throws RepositoryException {
         assertEquals(path + " should contain " + value, value, admin.getProperty(path).getString());
     }
+
+    public void assertPropertyExists(String path) throws RepositoryException {
+        assertTrue(path + " should exist", admin.propertyExists(path));
+    }
+
 
     public void assertProperty(String path, String[] values) throws RepositoryException {
         ArrayList<String> strings = new ArrayList<String>();

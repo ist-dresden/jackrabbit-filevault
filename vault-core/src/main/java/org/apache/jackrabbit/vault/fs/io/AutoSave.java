@@ -20,6 +20,8 @@ package org.apache.jackrabbit.vault.fs.io;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
@@ -28,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <code>AutoSave</code>...
+ * {@code AutoSave}...
  */
 public class AutoSave {
 
@@ -98,7 +100,7 @@ public class AutoSave {
         return ret;
     }
 
-    public void setTracker(ProgressTracker tracker) {
+    public void setTracker(@Nullable ProgressTracker tracker) {
         this.tracker = tracker;
     }
 
@@ -111,7 +113,7 @@ public class AutoSave {
     }
 
     /**
-     * Debug settings to allows to produce failures after each <code>debugFailEach</code> save.
+     * Debug settings to allows to produce failures after each {@code debugFailEach} save.
      * @param debugFailEach cardinal indicating when to fail 
      */
     public void setDebugFailEach(int debugFailEach) {
@@ -119,14 +121,14 @@ public class AutoSave {
     }
 
     /**
-     * Returns <code>true</code> if more than {@link #getThreshold()} nodes are
+     * Returns {@code true} if more than {@link #getThreshold()} nodes are
      * modified.
-     * @return <code>true</code> if threshold reached.
+     * @return {@code true} if threshold reached.
      */
     public boolean needsSave() {
         boolean res = (numModified - lastSave) >= threshold;
         if (res && !missingMandatory.isEmpty()) {
-            log.info("Threshold of {} reached but still unresolved mandatory items.", threshold);
+            log.debug("Threshold of {} reached but still unresolved mandatory items.", threshold);
             res = false;
         }
         return res;
@@ -134,16 +136,16 @@ public class AutoSave {
 
     /**
      * saves the changes under the given node and resets the counter
-     * @param session the session to save. can be <code>null</code>
+     * @param session the session to save. can be {@code null}
      * @throws RepositoryException if an error occurs.
      */
-    public void save(Session session) throws RepositoryException {
+    public void save(@Nullable Session session) throws RepositoryException {
         if (threshold == Integer.MAX_VALUE) {
-            log.debug("Save disabled.");
+            log.trace("Save disabled.");
             return;
         }
         int diff = numModified - lastSave;
-        log.info("Threshold of {} reached. {} approx {} transient changes. {} unresolved", new Object[]{
+        log.debug("Threshold of {} reached. {} approx {} transient changes. {} unresolved", new Object[]{
                 threshold,
                 dryRun ? "dry run, reverting" : "saving",
                 diff,
@@ -197,20 +199,20 @@ public class AutoSave {
     }
 
     /**
-     * Adds <code>num</code> modified
+     * Adds {@code num} modified
      * @param num number of modified
-     * @return <code>true</code> if threshold is reached
+     * @return {@code true} if threshold is reached
      */
     public boolean modified(int num) {
         numModified+= num;
         return needsSave();
     }
 
-    public void markMissing(String path) {
+    public void markMissing(@Nonnull String path) {
         missingMandatory.add(path);
     }
 
-    public void markResolved(String path) {
+    public void markResolved(@Nonnull String path) {
         missingMandatory.remove(path);
     }
 

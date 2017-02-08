@@ -85,7 +85,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <code>AbstractImporter</code>
+ * {@code AbstractImporter}
  *
  * file/directory combinations
  *
@@ -276,7 +276,7 @@ public class Importer {
     }
 
     /**
-     * Debug settings to allows to produce failures after each <code>failAfterEach</code> save.
+     * Debug settings to allows to produce failures after each {@code failAfterEach} save.
      * @param failAfterEach cardinal indicating when to fail
      */
     public void setDebugFailAfterSave(int failAfterEach) {
@@ -531,7 +531,7 @@ public class Importer {
     /**
      * Checks if the given file name is excluded
      * @param fileName the file name
-     * @return <code>true</code> if excluded
+     * @return {@code true} if excluded
      */
     protected boolean isExcluded(String fileName) {
         // hard coded exclusion of .vlt files/directories
@@ -578,7 +578,7 @@ public class Importer {
                 path.append('/').append(name);
                 TxInfo child = current.children().get(name);
                 if (child == null) {
-                    log.debug("Creating missing intermediate directory artifact for {}", name);
+                    log.trace("Creating missing intermediate directory artifact for {}", name);
                     child = current.addChild(new TxInfo(current, path.toString()));
                     child.isIntermediate = 1;
                     intermediates.put(path.toString(), child);
@@ -617,14 +617,14 @@ public class Importer {
                     if (!mappedParent.equals(parentInfo.path)) {
                         log.warn("remapping other than renames not supported yet ({} -> {}).", repoPath, mappedPath);
                     } else {
-                        log.info("remapping detected {} -> {}", repoPath, mappedPath);
+                        log.debug("remapping detected {} -> {}", repoPath, mappedPath);
                         repoPath = mappedPath;
                         repoName = Text.getName(repoPath);
                     }
                 }
 
                 TxInfo info = parentInfo.addChild(new TxInfo(parentInfo, repoPath));
-                log.debug("Creating directory artifact for {}", repoName);
+                log.trace("Creating directory artifact for {}", repoName);
                 Artifact parent = new DirectoryArtifact(repoName);
                 info.artifacts.add(parent);
 
@@ -666,7 +666,7 @@ public class Importer {
                     // this is an empty directory and potential intermediate
                     info.isIntermediate = 1;
                     intermediates.put(repoPath, info);
-                    log.debug("Detecting intermediate directory {}", repoName);
+                    log.trace("Detecting intermediate directory {}", repoName);
                 }
                 prepare(file, info, resolver);
             }
@@ -703,7 +703,7 @@ public class Importer {
                     if (!mappedParent.equals(parentInfo.path)) {
                         log.warn("remapping other than renames not supported yet ({} -> {}).", repoPath, mappedPath);
                     } else {
-                        log.info("remapping detected {} -> {}", repoPath, mappedPath);
+                        log.debug("remapping detected {} -> {}", repoPath, mappedPath);
                         repoPath = mappedPath;
                         repoName = Text.getName(repoPath);
                     }
@@ -778,7 +778,7 @@ public class Importer {
                         } else {
                             // "normal" file
                             TxInfo tx = new TxInfo(parentInfo, parentInfo.path + "/" + repoName);
-                            log.debug("Creating file artifact for {}", repoName);
+                            log.trace("Creating file artifact for {}", repoName);
                             tx.artifacts.add(new InputSourceArtifact(null,
                                     repoName, ext, type, is, serType
                             ));
@@ -788,7 +788,7 @@ public class Importer {
                     if (parent != null) {
                         String path = parentInfo.path + "/" + repoName;
                         String relPath = parent.name + path.substring(parent.path.length());
-                        log.debug("Attaching {} artifact {}", type, path);
+                        log.trace("Attaching {} artifact {}", type, path);
                         parent.artifacts.add(new InputSourceArtifact(null,
                                 relPath, ext, type, is, serType
                         ));
@@ -797,7 +797,7 @@ public class Importer {
                 if (type == ArtifactType.PRIMARY) {
                     // if primary artifact, add new tx info
                     TxInfo tx = new TxInfo(parentInfo, parentInfo.path + "/" + repoName);
-                    log.debug("Creating primary artifact for {}", repoName);
+                    log.trace("Creating primary artifact for {}", repoName);
                     tx.artifacts.add(new InputSourceArtifact(null,
                             repoName, ext, type, is, serType
                     ));
@@ -818,7 +818,7 @@ public class Importer {
             if (skipList.isEmpty()) {
                 if (info == cpTxInfo) {
                     // don't need to import again, just set import info
-                    log.debug("skipping last checkpoint info {}", info.path);
+                    log.trace("skipping last checkpoint info {}", info.path);
                     imp = cpImportInfo;
                 } else {
                     imp = commit(session, info);
@@ -833,7 +833,7 @@ public class Importer {
                 for (TxInfo i: skipList) {
                     skips.append(i.path).append(',');
                 }
-                log.debug("skip list: {}", skips);
+                log.trace("skip list: {}", skips);
             }
 
             if (autoSave.needsSave()) {
@@ -865,7 +865,7 @@ public class Importer {
                     // continue normally after lng child was found
                     next = null;
                 } else {
-                    log.debug("skipping {}", child.path);
+                    log.trace("skipping {}", child.path);
                 }
             }
 
@@ -875,7 +875,7 @@ public class Importer {
                 if (node == null) {
                     log.warn("Unable to restore order of {}. Node does not exist.", info.path);
                 } else if (info.nameList.needsReorder(node)) {
-                    log.debug("Restoring order of {}.", info.path);
+                    log.trace("Restoring order of {}.", info.path);
                     info.nameList.restoreOrder(node);
                 }
             }
@@ -887,7 +887,7 @@ public class Importer {
     }
 
     private ImportInfoImpl commit(Session session, TxInfo info) throws RepositoryException, IOException {
-        log.debug("committing {}", info.path);
+        log.trace("committing {}", info.path);
         ImportInfoImpl imp = null;
         if (info.artifacts == null) {
             log.debug("S {}", info.path);
@@ -943,7 +943,7 @@ public class Importer {
             } else {
                 if (info.isIntermediate == 2) {
                     // skip existing intermediate
-                    log.debug("skipping intermediate node at {}", info.path);
+                    log.trace("skipping intermediate node at {}", info.path);
                 } else if (info.artifacts.getPrimaryData() == null) {
                     // create nt:folder node if not exists
                     imp = folderHandler.accept(filter, node, info.name,  info.artifacts);
@@ -1035,7 +1035,7 @@ public class Importer {
             // todo: this could be a problem during error recovery
             info = info.remap(imp.getRemapped());
         }
-        log.debug("committed {}", info.path);
+        log.trace("committed {}", info.path);
         return imp;
     }
 
@@ -1105,9 +1105,9 @@ public class Importer {
             String name = e.getName();
             File target = new File(opts.getPatchDirectory(), name);
             if (opts.isDryRun()) {
-                log.info("Dry run: Would copy patch {} to {}", name, target.getPath());
+                log.debug("Dry run: Would copy patch {} to {}", name, target.getPath());
             } else {
-                log.info("Copying patch {} to {}", name, target.getPath());
+                log.debug("Copying patch {} to {}", name, target.getPath());
                 InputStream in = null;
                 OutputStream out = null;
                 try {
@@ -1142,7 +1142,7 @@ public class Importer {
         private NodeNameList nameList;
 
         public TxInfo(TxInfo parent, String path) {
-            log.debug("New TxInfo {}" , path);
+            log.trace("New TxInfo {}" , path);
             this.parent = parent;
             this.path = path;
             this.name = Text.getName(path);
@@ -1196,7 +1196,7 @@ public class Importer {
         }
 
         public void discard() {
-            log.debug("discarding {}", path);
+            log.trace("discarding {}", path);
             artifacts = null;
             children = null;
         }

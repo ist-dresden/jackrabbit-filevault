@@ -41,7 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * <code>ImportInfo</code>...
+ * {@code ImportInfo}...
  *
  */
 public class ImportInfoImpl implements ImportInfo {
@@ -228,7 +228,7 @@ public class ImportInfoImpl implements ImportInfo {
                 if (node.isNodeType(JcrConstants.MIX_VERSIONABLE)) {
                     try {
                         Version v = node.checkin();
-                        log.info("Checked in versionable node {} (v={})", path, v.getName());
+                        log.debug("Checked in versionable node {} (v={})", path, v.getName());
                     } catch (RepositoryException e) {
                         log.error("Error while checkin node {}: {}", path, e.toString());
                     }

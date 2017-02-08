@@ -22,10 +22,8 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
 import org.apache.jackrabbit.vault.packaging.impl.JcrPackageDefinitionImpl;
-import org.apache.jackrabbit.vault.packaging.impl.JcrPackageImpl;
 import org.apache.jackrabbit.vault.packaging.impl.JcrPackageManagerImpl;
 import org.apache.jackrabbit.vault.packaging.impl.PackageManagerImpl;
-import org.apache.jackrabbit.vault.util.JcrConstants;
 
 /**
  * Default access point to package managers for non OSGi clients.
@@ -62,8 +60,8 @@ public class PackagingService {
     }
 
     /**
-     * Opens a package that is based on the given node. If <code>allowInvalid</code>
-     * is <code>true</code> also invalid packages are returned, but only if the
+     * Opens a package that is based on the given node. If {@code allowInvalid}
+     * is {@code true} also invalid packages are returned, but only if the
      * node is file like (i.e. is nt:hierarchyNode and has a
      * jcr:content/jcr:data property).
      *
@@ -71,24 +69,16 @@ public class PackagingService {
      * which does not create a package manager instance.
      *
      * @param node the underlying node
-     * @param allowInvalid if <code>true</code> invalid packages are openend, too.
-     * @return the new package or <code>null</code> it the package is not
-     *         valid unless <code>allowInvalid</code> is <code>true</code>.
+     * @param allowInvalid if {@code true} invalid packages are openend, too.
+     * @return the new package or {@code null} it the package is not
+     *         valid unless {@code allowInvalid} is {@code true}.
      * @throws RepositoryException if an error occurs
      * 
      * @since 2.3.0
      */
     public static JcrPackage open(Node node, boolean allowInvalid)
             throws RepositoryException {
-        JcrPackage pack = new JcrPackageImpl(node);
-        if (pack.isValid()) {
-            return pack;
-        } else if (allowInvalid
-                && node.isNodeType(JcrConstants.NT_HIERARCHYNODE)
-                && node.hasProperty(JcrConstants.JCR_CONTENT + "/" + JcrConstants.JCR_DATA)) {
-            return pack;
-        } else {
-            return null;
-        }
+        JcrPackageManager pMgr = getPackageManager(node.getSession());
+        return pMgr.open(node, allowInvalid);
     }
 }

@@ -20,7 +20,7 @@ package org.apache.jackrabbit.vault.packaging;
 import junit.framework.TestCase;
 
 /**
- * <code>DependencyTest</code>...
+ * {@code DependencyTest}...
  */
 public class DependencyTest extends TestCase {
 
@@ -86,6 +86,12 @@ public class DependencyTest extends TestCase {
         assertEquals("group:name", d.toString());
     }
 
+    public void testToString5() {
+        PackageId id = new PackageId("group", "name", Version.EMPTY);
+        Dependency d = new Dependency(id);
+        assertEquals("group:name", d.toString());
+    }
+
     public void testParse() {
         Dependency[] d = Dependency.parse("name1,group2:name2,group3:name3:1.0,group4:name4:[1.0,2.0],:name5:[1.0,2.0]");
         assertEquals(5,d.length);
@@ -100,5 +106,23 @@ public class DependencyTest extends TestCase {
         PackageId id = PackageId.fromString("apache/jackrabbit/product:jcr-content:5.5.0-SNAPSHOT.20111116");
         Dependency d = Dependency.fromString("apache/jackrabbit/product:jcr-content:[5.5.0,)");
         assertTrue(d.matches(id));
+    }
+
+    public void testAddDependency() {
+        Dependency[] d = Dependency.parse("n1,g2:n2,g3:n3:1,g4:n4:[1,2]");
+        String expected = "n1,g2:n2,g3:n3:1,g4:n4:[1,2],n5:g5:[1,2]";
+        assertEquals(expected, Dependency.toString(DependencyUtil.add(d, Dependency.fromString("n5:g5:[1,2]"))));
+    }
+
+    public void testAddDependencyExisting() {
+        Dependency[] d = Dependency.parse("n1,g2:n2,g3:n3:1,g4:n4:[1,2]");
+        String expected = "n1,g2:n2,g3:n3:1,g4:n4:[1,2]";
+        assertEquals(expected, Dependency.toString(DependencyUtil.add(d, Dependency.fromString("g3:n3"))));
+    }
+
+    public void testAddDependencyNullName() {
+        Dependency[] d = Dependency.parse("n1,g2:n2,g3:n3:1,g4:n4:[1,2]");
+        String expected = "n1,g2:n2,g3:n3:1,g4:n4:[1,2],g3";
+        assertEquals(expected, Dependency.toString(DependencyUtil.add(d, Dependency.fromString("g3"))));
     }
 }

@@ -20,6 +20,7 @@ package org.apache.jackrabbit.vault.fs.impl.aggregator;
 import javax.jcr.Node;
 import javax.jcr.Property;
 import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 import javax.jcr.Value;
 
 import org.apache.jackrabbit.vault.fs.DirectoryArtifact;
@@ -32,7 +33,6 @@ import org.apache.jackrabbit.vault.fs.api.DumpContext;
 import org.apache.jackrabbit.vault.fs.api.Dumpable;
 import org.apache.jackrabbit.vault.fs.api.ImportInfo;
 import org.apache.jackrabbit.vault.fs.api.ItemFilterSet;
-import org.apache.jackrabbit.vault.fs.impl.AggregateManagerImpl;
 import org.apache.jackrabbit.vault.fs.impl.ArtifactSetImpl;
 import org.apache.jackrabbit.vault.fs.impl.io.DocViewSerializer;
 import org.apache.jackrabbit.vault.fs.impl.io.ImportInfoImpl;
@@ -89,7 +89,7 @@ public class FileAggregator implements Aggregator, Dumpable {
                 String expected = MimeTypes.getMimeType(root.getName(), MimeTypes.APPLICATION_OCTET_STREAM);
                 return !expected.equals(prop.getString());
             } else if (name.equals(JcrConstants.JCR_ENCODING)) {
-                if (prop.getString().equals("utf-8")) {
+                if ("utf-8".equals(prop.getString())) {
                     String mimeType = MimeTypes.getMimeType(root.getName(), MimeTypes.APPLICATION_OCTET_STREAM);
                     return MimeTypes.isBinary(mimeType);
                 }
@@ -134,7 +134,7 @@ public class FileAggregator implements Aggregator, Dumpable {
     /**
      * {@inheritDoc}
      *
-     * @return <code>false</code> always.
+     * @return {@code false} always.
      */
     public boolean hasFullCoverage() {
         return false;
@@ -143,7 +143,7 @@ public class FileAggregator implements Aggregator, Dumpable {
     /**
      * {@inheritDoc}
      *
-     * @return <code>false</code> always.
+     * @return {@code false} always.
      */
     public boolean isDefault() {
         return false;
@@ -151,16 +151,15 @@ public class FileAggregator implements Aggregator, Dumpable {
 
     /**
      * {@inheritDoc}
-     * @param aggregate
      */
     public ArtifactSet createArtifacts(Aggregate aggregate) throws RepositoryException {
         ArtifactSetImpl artifacts = new ArtifactSetImpl();
         Node node = aggregate.getNode();
-        ((AggregateManagerImpl) aggregate.getManager()).addNodeTypes(node);
+        aggregate.getManager().addNodeTypes(node);
         Node content = node;
         if (content.isNodeType(JcrConstants.NT_FILE)) {
             content = node.getNode(JcrConstants.JCR_CONTENT);
-            ((AggregateManagerImpl) aggregate.getManager()).addNodeTypes(content);
+            aggregate.getManager().addNodeTypes(content);
         }
         // retrieve basic properties
         long lastModified = 0;
@@ -249,10 +248,10 @@ public class FileAggregator implements Aggregator, Dumpable {
             throws RepositoryException {
         ImportInfo info = new ImportInfoImpl();
         info.onDeleted(node.getPath());
-        Node parent = node.getParent();
+        Session s = node.getSession();
         node.remove();
         if (trySave) {
-            parent.save();
+            s.save();
         }
         return info;
     }

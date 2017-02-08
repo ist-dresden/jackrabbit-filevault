@@ -25,25 +25,31 @@ import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 
 /**
- * <code>WorkspaceFilter</code>...
+ * {@code WorkspaceFilter} defined a filter for items (node or property).
  */
 public interface WorkspaceFilter extends Dumpable {
 
     /**
-     * Returns a list of path filter sets.
+     * Returns a list of path filter sets for node items.
      * @return the list of path filter sets.
      */
     List<PathFilterSet> getFilterSets();
 
     /**
-     * Returns the filter set that covers the respective path
+     * Returns a list of path filter sets for property items.
+     * @return the list of path filter sets.
+     */
+    List<PathFilterSet> getPropertyFilterSets();
+
+    /**
+     * Returns the filter set that covers the respective node path
      * @param path the path
-     * @return the filter set or <code>null</code>
+     * @return the filter set or {@code null}
      */
     PathFilterSet getCoveringFilterSet(String path);
 
     /**
-     * Returns the import mode for the given path.
+     * Returns the import mode for the given node path.
      * @param path path to check
      * @return the import mode or {@link ImportMode#REPLACE} if the given path
      *         is not covered by this filter.
@@ -51,38 +57,38 @@ public interface WorkspaceFilter extends Dumpable {
     ImportMode getImportMode(String path);
 
     /**
-     * Checks if the given path is contained in this workspace filter.
-     * It returns <code>true</code> if any of the filter sets contain the path
+     * Checks if the given node path is contained in this workspace filter.
+     * It returns {@code true} if any of the filter sets contain the path
      * and it's not globally ignored.
      *
      * @param path to check
-     * @return <code>true</code> if the given path is included in this filter.
+     * @return {@code true} if the given path is included in this filter.
      */
     boolean contains(String path);
 
     /**
-     * Checks if the given path is covered in this workspace filter.
-     * It only returns <code>true</code> if at least one of the sets covers
+     * Checks if the given node path is covered in this workspace filter.
+     * It only returns {@code true} if at least one of the sets covers
      * the path and is not globally ignored.
      *
      * @param path the pathto check
-     * @return <code>true</code> if the given path is covered by this filter.
+     * @return {@code true} if the given path is covered by this filter.
      */
     boolean covers(String path);
 
     /**
-     * Checks if the given path is an ancestor of any of the filter sets.
+     * Checks if the given node path is an ancestor of any of the filter sets.
      *
      * @param path the item to check
-     * @return <code>true</code> if the given item is an ancestor
+     * @return {@code true} if the given item is an ancestor
      */
     boolean isAncestor(String path);
 
     /**
-     * Checks if the given path is globally ignored.
+     * Checks if the given node path is globally ignored.
      *
      * @param path the path to check.
-     * @return <code>true</code> if the item is globally ignored.
+     * @return {@code true} if the item is globally ignored.
      */
     boolean isGloballyIgnored(String path);
 
@@ -118,12 +124,12 @@ public interface WorkspaceFilter extends Dumpable {
 
     /**
      * Dumps the coverage of this filter using the given session. The traversal starts
-     * at the common ancestor of all filter sets. If <code>skipJcrContent</code> is <code>true</code>
+     * at the common ancestor of all filter sets. If {@code skipJcrContent} is {@code true}
      * the jcr:content nodes are excluded from traversal and reporting.
      *
      * @param session session
      * @param listener listener to report progress
-     * @param skipJcrContent <code>true</code> to skip jcr:content nodes
+     * @param skipJcrContent {@code true} to skip jcr:content nodes
      * @throws RepositoryException if an error occurs
      */
     void dumpCoverage(Session session, ProgressTrackerListener listener, boolean skipJcrContent)

@@ -34,7 +34,7 @@ import org.apache.jackrabbit.vault.fs.config.DefaultWorkspaceFilter;
 import org.apache.jackrabbit.vault.fs.filter.DefaultPathFilter;
 
 /**
- * <code>JcrWorkspaceFilter</code> implements serializations of a workspace
+ * {@code JcrWorkspaceFilter} implements serializations of a workspace
  * filter that is stored in the repository
  */
 public class JcrWorkspaceFilter  {
@@ -69,7 +69,7 @@ public class JcrWorkspaceFilter  {
                     String type = idx > 0 ? rule.substring(0, idx) : "include";
                     String patt = idx > 0 ? rule.substring(idx + 1) : "";
                     DefaultPathFilter pf = new DefaultPathFilter(patt);
-                    if (type.equals("include")) {
+                    if ("include".equals(type)) {
                         set.addInclude(pf);
                     } else {
                         set.addExclude(pf);
@@ -81,7 +81,7 @@ public class JcrWorkspaceFilter  {
                     String type = rule.getProperty(JcrPackageDefinitionImpl.PN_TYPE).getString();
                     String pattern = rule.getProperty(JcrPackageDefinitionImpl.PN_PATTERN).getString();
                     DefaultPathFilter pf = new DefaultPathFilter(pattern);
-                    if (type.equals("include")) {
+                    if ("include".equals(type)) {
                         set.addInclude(pf);
                     } else {
                         set.addExclude(pf);
@@ -117,7 +117,7 @@ public class JcrWorkspaceFilter  {
             nr++;
         }
         if (save) {
-            defNode.save();
+            defNode.getSession().save();
         }
     }
 
@@ -147,7 +147,7 @@ public class JcrWorkspaceFilter  {
             nr++;
         }
         if (save) {
-            defNode.save();
+            defNode.getSession().save();
         }
     }
 

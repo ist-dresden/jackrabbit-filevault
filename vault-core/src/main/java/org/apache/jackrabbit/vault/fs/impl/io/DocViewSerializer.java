@@ -30,7 +30,7 @@ import org.apache.jackrabbit.vault.util.xml.serialize.OutputFormat;
 import org.apache.jackrabbit.vault.util.xml.serialize.XMLSerializer;
 
 /**
- * <code>DocViewSerializer</code>...
+ * {@code DocViewSerializer}...
 *
 */
 public class DocViewSerializer implements Serializer {
@@ -59,7 +59,6 @@ public class DocViewSerializer implements Serializer {
         oFmt.setBreakEachAttribute(true);
         XMLSerializer ser = new XMLSerializer(out, oFmt);
         DocViewSAXFormatter fmt = new DocViewSAXFormatter(aggregate, ser);
-        fmt.setUseJcrRoot(true);
         aggregate.walk(fmt);
     }
 

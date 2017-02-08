@@ -17,6 +17,7 @@
 
 package org.apache.jackrabbit.vault.packaging.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +28,10 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.TreeSet;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jcr.Binary;
 import javax.jcr.ItemExistsException;
 import javax.jcr.Node;
@@ -53,6 +57,7 @@ import org.apache.jackrabbit.vault.packaging.PackageException;
 import org.apache.jackrabbit.vault.packaging.PackageId;
 import org.apache.jackrabbit.vault.packaging.VaultPackage;
 import org.apache.jackrabbit.vault.packaging.Version;
+import org.apache.jackrabbit.vault.packaging.events.PackageEvent;
 import org.apache.jackrabbit.vault.util.InputStreamPump;
 import org.apache.jackrabbit.vault.util.JcrConstants;
 import org.apache.jackrabbit.vault.util.Text;
@@ -60,7 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Extends the <code>PackageManager</code> by JCR specific methods
+ * Extends the {@code PackageManager} by JCR specific methods
  */
 public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPackageManager {
 
@@ -104,6 +109,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         initNodeTypes();
     }
 
+    @Override
     public JcrPackage open(PackageId id) throws RepositoryException {
         String path = id.getInstallationPath();
         String[] exts = new String[]{"", ".zip", ".jar"};
@@ -115,6 +121,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         return null;
     }
 
+    @Override
     public JcrPackage open(Node node) throws RepositoryException {
         return open(node, false);
     }
@@ -122,8 +129,9 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage open(Node node, boolean allowInvalid) throws RepositoryException {
-        JcrPackage pack = new JcrPackageImpl(node);
+        JcrPackage pack = new JcrPackageImpl(this, node);
         if (pack.isValid()) {
             return pack;
         } else if (allowInvalid
@@ -138,6 +146,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public PackageId resolve(Dependency dependency, boolean onlyInstalled) throws RepositoryException {
         if (!getPackageRoot().hasNode(dependency.getGroup())) {
             return null;
@@ -150,7 +159,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
             if (".snapshot".equals(child.getName())) {
                 continue;
             }
-            JcrPackageImpl pack = new JcrPackageImpl(child);
+            JcrPackageImpl pack = new JcrPackageImpl(this, child);
             if (pack.isValid()) {
                 if (onlyInstalled && !pack.isInstalled()) {
                     continue;
@@ -170,6 +179,27 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
+    public PackageId[] usage(PackageId id) throws RepositoryException {
+        TreeSet<PackageId> usages = new TreeSet<PackageId>();
+        for (JcrPackage p: listPackages()) {
+            if (!p.isInstalled()) {
+                continue;
+            }
+            for (Dependency dep: p.getDefinition().getDependencies()) {
+                if (dep.matches(id)) {
+                    usages.add(p.getDefinition().getId());
+                    break;
+                }
+            }
+        }
+        return usages.toArray(new PackageId[usages.size()]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public JcrPackage upload(InputStream in, boolean replace) throws RepositoryException, IOException {
         return upload(in, replace, false);
     }
@@ -177,6 +207,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage upload(InputStream in, boolean replace, boolean strict)
             throws RepositoryException, IOException {
 
@@ -227,7 +258,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         JcrPackageDefinitionImpl.State state = null;
 
         if (parent.hasNode(name)) {
-            JcrPackage oldPackage = new JcrPackageImpl(parent.getNode(name));
+            JcrPackage oldPackage = new JcrPackageImpl(this, parent.getNode(name));
             JcrPackageDefinitionImpl oldDef = (JcrPackageDefinitionImpl) oldPackage.getDefinition();
             if (oldDef != null) {
                 state = oldDef.getState();
@@ -241,13 +272,12 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         }
         JcrPackage jcrPack = null;
         try {
-            jcrPack = JcrPackageImpl.createNew(parent, pid, bin, archive);
-            if (jcrPack != null) {
-                JcrPackageDefinitionImpl def = (JcrPackageDefinitionImpl) jcrPack.getDefinition();
-                if (state != null) {
-                    def.setState(state);
-                }
+            jcrPack = createNew(parent, pid, bin, archive);
+            JcrPackageDefinitionImpl def = (JcrPackageDefinitionImpl) jcrPack.getDefinition();
+            if (state != null) {
+                def.setState(state);
             }
+            dispatch(PackageEvent.Type.UPLOAD, pid, null);
             return jcrPack;
         } finally {
             bin.dispose();
@@ -262,6 +292,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage upload(File file, boolean isTmpFile, boolean replace, String nameHint)
             throws RepositoryException, IOException {
         return upload(file, isTmpFile, replace, nameHint, false);
@@ -270,6 +301,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage upload(File file, boolean isTmpFile, boolean replace, String nameHint, boolean strict)
             throws RepositoryException, IOException {
 
@@ -307,7 +339,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         JcrPackageDefinitionImpl.State state = null;
 
         if (parent.hasNode(name)) {
-            JcrPackage oldPackage = new JcrPackageImpl(parent.getNode(name));
+            JcrPackage oldPackage = new JcrPackageImpl(this, parent.getNode(name));
             JcrPackageDefinitionImpl oldDef = (JcrPackageDefinitionImpl) oldPackage.getDefinition();
             if (oldDef != null) {
                 state = oldDef.getState();
@@ -321,13 +353,12 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         }
         JcrPackage jcrPack = null;
         try {
-            jcrPack = JcrPackageImpl.createNew(parent, pid, pack, false);
-            if (jcrPack != null) {
-                JcrPackageDefinitionImpl def = (JcrPackageDefinitionImpl) jcrPack.getDefinition();
-                if (state != null) {
-                    def.setState(state);
-                }
+            jcrPack = createNew(parent, pid, pack, false);
+            JcrPackageDefinitionImpl def = (JcrPackageDefinitionImpl) jcrPack.getDefinition();
+            if (state != null) {
+                def.setState(state);
             }
+            dispatch(PackageEvent.Type.UPLOAD, pid, null);
             return jcrPack;
         } finally {
             if (jcrPack == null) {
@@ -341,17 +372,19 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage create(Node folder, String name)
             throws RepositoryException, IOException {
         if (folder == null) {
             folder = getPackageRoot();
         }
-        return JcrPackageImpl.createNew(folder, new PackageId(name), null, true);
+        return createNew(folder, new PackageId(name), null, true);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage create(String group, String name)
             throws RepositoryException, IOException {
         return create(group, name, null);
@@ -360,6 +393,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage create(String group, String name, String version)
             throws RepositoryException, IOException {
         // sanitize name
@@ -372,28 +406,110 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         }
         PackageId pid = new PackageId(group, name, version);
         Node folder = mkdir(Text.getRelativeParent(pid.getInstallationPath(), 1), false);
-        try {
-            return JcrPackageImpl.createNew(folder, pid, null, false);
-        } finally {
-            session.save();
-        }
+        return createNew(folder, pid, null, true);
     }
+
+    /**
+     * Creates a new jcr vault package.
+     *
+     * @param parent the parent node
+     * @param pid the package id of the new package.
+     * @param pack the underlying zip package or null.
+     * @param autoSave if {@code true} the changes are persisted immediately
+     * @return the created jcr vault package.
+     * @throws RepositoryException if an repository error occurs
+     * @throws IOException if an I/O error occurs
+     *
+     * @since 2.3.0
+     */
+    @Nonnull
+    public JcrPackage createNew(@Nonnull Node parent, @Nonnull PackageId pid, @Nullable VaultPackage pack, boolean autoSave)
+            throws RepositoryException, IOException {
+        Node node = parent.addNode(Text.getName(pid.getInstallationPath() + ".zip"), JcrConstants.NT_FILE);
+        Node content = node.addNode(JcrConstants.JCR_CONTENT, JcrConstants.NT_RESOURCE);
+        content.addMixin(JcrPackage.NT_VLT_PACKAGE);
+        Node defNode = content.addNode(JcrPackage.NN_VLT_DEFINITION);
+        JcrPackageDefinition def = new JcrPackageDefinitionImpl(defNode);
+        def.set(JcrPackageDefinition.PN_NAME, pid.getName(), false);
+        def.set(JcrPackageDefinition.PN_GROUP, pid.getGroup(), false);
+        def.set(JcrPackageDefinition.PN_VERSION, pid.getVersionString(), false);
+        def.touch(null, false);
+        content.setProperty(JcrConstants.JCR_LASTMODIFIED, Calendar.getInstance());
+        content.setProperty(JcrConstants.JCR_MIMETYPE, JcrPackage.MIME_TYPE);
+        InputStream in = new ByteArrayInputStream(new byte[0]);
+        try {
+            if (pack != null && pack.getFile() != null) {
+                in = FileUtils.openInputStream(pack.getFile());
+            }
+            // stay jcr 1.0 compatible
+            //noinspection deprecation
+            content.setProperty(JcrConstants.JCR_DATA, in);
+            if (pack != null) {
+                def.unwrap(pack, true, false);
+            }
+            if (autoSave) {
+                parent.getSession().save();
+            }
+        } finally {
+            IOUtils.closeQuietly(in);
+        }
+        dispatch(PackageEvent.Type.CREATE, pid, null);
+        return new JcrPackageImpl(this, node, (ZipVaultPackage) pack);
+    }
+
+    /**
+     * Creates a new jcr vault package.
+     *
+     * @param parent the parent node
+     * @param pid the package id of the new package.
+     * @param bin the binary containing the zip
+     * @param archive the archive with the meta data
+     * @return the created jcr vault package.
+     * @throws RepositoryException if an repository error occurs
+     * @throws IOException if an I/O error occurs
+     *
+     * @since 3.1
+     */
+    @Nonnull
+    public JcrPackage createNew(@Nonnull Node parent, @Nonnull PackageId pid, @Nonnull Binary bin, @Nonnull MemoryArchive archive)
+            throws RepositoryException, IOException {
+        Node node = parent.addNode(Text.getName(pid.getInstallationPath() + ".zip"), JcrConstants.NT_FILE);
+        Node content = node.addNode(JcrConstants.JCR_CONTENT, JcrConstants.NT_RESOURCE);
+        content.addMixin(JcrPackage.NT_VLT_PACKAGE);
+        Node defNode = content.addNode(JcrPackage.NN_VLT_DEFINITION);
+        JcrPackageDefinitionImpl def = new JcrPackageDefinitionImpl(defNode);
+        def.set(JcrPackageDefinition.PN_NAME, pid.getName(), false);
+        def.set(JcrPackageDefinition.PN_GROUP, pid.getGroup(), false);
+        def.set(JcrPackageDefinition.PN_VERSION, pid.getVersionString(), false);
+        def.touch(null, false);
+        content.setProperty(JcrConstants.JCR_LASTMODIFIED, Calendar.getInstance());
+        content.setProperty(JcrConstants.JCR_MIMETYPE, JcrPackage.MIME_TYPE);
+        content.setProperty(JcrConstants.JCR_DATA, bin);
+        def.unwrap(archive, false);
+        dispatch(PackageEvent.Type.CREATE, pid, null);
+        return new JcrPackageImpl(this, node);
+    }
+
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public void remove(JcrPackage pack) throws RepositoryException {
+        PackageId pid = pack.getDefinition().getId();
         JcrPackage snap = pack.getSnapshot();
         if (snap != null) {
             snap.getNode().remove();
         }
         pack.getNode().remove();
         session.save();
+        dispatch(PackageEvent.Type.REMOVE, pid, null);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage rename(JcrPackage pack, String group, String name)
             throws PackageException, RepositoryException {
         return rename(pack, group, name, null);
@@ -402,6 +518,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public JcrPackage rename(JcrPackage pack, String group, String name, String version)
             throws PackageException, RepositoryException {
         if (!pack.isValid()) {
@@ -423,7 +540,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         );
         String dstPath = newId.getInstallationPath() + ".zip";
         if (id.equals(newId) && pack.getNode().getPath().equals(dstPath)) {
-            log.info("Package id not changed. won't rename.");
+            log.debug("Package id not changed. won't rename.");
             return pack;
         }
         def.setId(newId, false);
@@ -440,12 +557,14 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
 
         session.save();
         Node newNode = session.getNode(dstPath);
+        dispatch(PackageEvent.Type.RENAME, id, new PackageId[]{newId});
         return open(newNode);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public void assemble(JcrPackage pack, ProgressTrackerListener listener)
             throws PackageException, RepositoryException, IOException {
         pack.verifyId(true, true);
@@ -455,6 +574,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public void assemble(Node packNode, JcrPackageDefinition definition,
                          ProgressTrackerListener listener)
             throws PackageException, RepositoryException, IOException {
@@ -470,6 +590,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         opts.setIncludeVersions(def.getBoolean("includeVersions"));
 
         VaultPackage pack = assemble(packNode.getSession(), opts, (File) null);
+        PackageId id = pack.getId();
 
         // update this content
         Node contentNode = packNode.getNode(JcrConstants.JCR_CONTENT);
@@ -484,8 +605,9 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         contentNode.setProperty(JcrConstants.JCR_DATA, in);
         contentNode.setProperty(JcrConstants.JCR_LASTMODIFIED, now);
         contentNode.setProperty(JcrConstants.JCR_MIMETYPE, JcrPackage.MIME_TYPE);
-        packNode.save();
+        packNode.getSession().save();
         pack.close();
+        dispatch(PackageEvent.Type.ASSEMBLE, id, null);
     }
 
     /**
@@ -509,6 +631,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public void assemble(JcrPackageDefinition definition,
                          ProgressTrackerListener listener, OutputStream out)
             throws IOException, RepositoryException, PackageException {
@@ -528,6 +651,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public void rewrap(JcrPackage pack, ProgressTrackerListener listener)
             throws PackageException, RepositoryException, IOException {
         VaultPackage src = ((JcrPackageImpl) pack).getPackage(true);
@@ -558,7 +682,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
         contentNode.setProperty(JcrConstants.JCR_DATA, in);
         contentNode.setProperty(JcrConstants.JCR_LASTMODIFIED, now);
         contentNode.setProperty(JcrConstants.JCR_MIMETYPE, JcrPackage.MIME_TYPE);
-        packNode.save();
+        packNode.getSession().save();
         dst.close();
     }
 
@@ -566,6 +690,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public Node getPackageRoot() throws RepositoryException {
         return getPackageRoot(false);
     }
@@ -573,7 +698,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * yet another Convenience method to create intermediate nodes.
      * @param path path to create
-     * @param autoSave if <code>true</code> all changes are automatically persisted
+     * @param autoSave if {@code true} all changes are automatically persisted
      * @return the node
      * @throws RepositoryException if an error occurrs
      */
@@ -599,7 +724,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
             throw lastError;
         }
         if (autoSave) {
-            parent.save();
+            parent.getSession().save();
         }
         return node;
     }
@@ -638,6 +763,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public Node getPackageRoot(boolean noCreate) throws RepositoryException {
         if (packRoot == null) {
             if (session.nodeExists(PACKAGE_ROOT_PATH)) {
@@ -672,6 +798,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<JcrPackage> listPackages() throws RepositoryException {
         return listPackages(null);
     }
@@ -679,6 +806,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<JcrPackage> listPackages(WorkspaceFilter filter) throws RepositoryException {
         Node root = getPackageRoot(true);
         if (root == null) {
@@ -694,6 +822,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     /**
      * {@inheritDoc}
      */
+    @Override
     public List<JcrPackage> listPackages(String group, boolean built) throws RepositoryException {
         Node pRoot = getPackageRoot(true);
         if (pRoot == null) {
@@ -728,14 +857,14 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
     }
 
     /**
-     * internally adds the packages below <code>root</code> to the given list
+     * internally adds the packages below {@code root} to the given list
      * recursively.
      *
      * @param root root node
      * @param packages list for the packages
      * @param filter optional filter to filter out packages
-     * @param built if <code>true</code> only packages with size > 0 are returned
-     * @param shallow if <code>true</code> don't recurs
+     * @param built if {@code true} only packages with size > 0 are returned
+     * @param shallow if {@code true} don't recurs
      * @throws RepositoryException if an error occurs
      */
     private void listPackages(Node root, List<JcrPackage> packages,
@@ -747,7 +876,7 @@ public class JcrPackageManagerImpl extends PackageManagerImpl implements JcrPack
                 if (".snapshot".equals(child.getName())) {
                     continue;
                 }
-                JcrPackageImpl pack = new JcrPackageImpl(child);
+                JcrPackageImpl pack = new JcrPackageImpl(this, child);
                 if (pack.isValid()) {
                     // skip packages with illegal names
                     JcrPackageDefinition jDef = pack.getDefinition();
