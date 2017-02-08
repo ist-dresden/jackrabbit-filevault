@@ -21,14 +21,14 @@ import javax.jcr.Node;
 import javax.jcr.RepositoryException;
 
 /**
- * <code>AccessControlManagement</code>...
+ * {@code AccessControlManagement}...
  */
 public interface ACLManagement {
 
     /**
      * Checks if the given node type name is used for ACLs
      * @param name the node type name
-     * @return <code>true</code> if used for ACLs
+     * @return {@code true} if used for ACLs
      */
     boolean isACLNodeType(String name);
 
@@ -36,7 +36,7 @@ public interface ACLManagement {
      * Checks if the given node type name is use as access controllable
      * mixin.
      * @param name the node type name
-     * @return <code>true</code> if the name is the mixin name
+     * @return {@code true} if the name is the mixin name
      */
     boolean isAccessControllableMixin(String name);
 
@@ -44,7 +44,7 @@ public interface ACLManagement {
     /**
      * Checks if the given node is an ACL node.
      * @param node the node
-     * @return <code>true</code> if it's an ACL node.
+     * @return {@code true} if it's an ACL node.
      * @throws RepositoryException if an error occurs
      */
     boolean isACLNode(Node node) throws RepositoryException;
@@ -54,10 +54,11 @@ public interface ACLManagement {
      * mixin and adds it if missing.
      *
      * @param node the node to check
-     * @return <code>true</code> if was made access controllable
+     * @param policyPrimaryType Primary node type of policy
+     * @return {@code true} if was made access controllable
      * @throws RepositoryException if an error occurs
      */
-    boolean ensureAccessControllable(Node node) throws RepositoryException;
+    boolean ensureAccessControllable(Node node, String policyPrimaryType) throws RepositoryException;
 
     /**
      * Removes all ACLs from the given node.

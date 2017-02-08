@@ -31,7 +31,7 @@
     <!-- ====================================================================== -->
     <groupId>org.apache.jackrabbit.vault</groupId>
     <artifactId>parent</artifactId>
-    <version>3.1.27-SNAPSHOT</version>
+    <version>3.1.35-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Apache Jackrabbit FileVault (Parent Project)</name>
@@ -40,8 +40,8 @@
     </description>
 
     <properties>
-        <jackrabbit.version>2.11.3</jackrabbit.version>
-        <oak.version>1.3.14</oak.version>
+        <jackrabbit.version>2.13.7</jackrabbit.version>
+        <oak.version>1.5.9</oak.version>
     </properties>
 
     <!-- ====================================================================== -->
@@ -88,8 +88,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <debug>true</debug>
                     <showDeprecation>false</showDeprecation>
                     <showWarnings>true</showWarnings>
@@ -140,8 +140,42 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>2.4.0</version>
+                    <version>3.0.1</version>
                     <inherited>true</inherited>
+                    <configuration>
+                        <outputDirectory>${basedir}/target/classes</outputDirectory>
+                        <obrRepository>NONE</obrRepository>
+                        <instructions>
+                            <Bundle-Category>jackrabbit</Bundle-Category>
+                            <Bundle-DocURL>http://jackrabbit.apache.org/filevault/</Bundle-DocURL>
+                            <Bundle-Vendor>The Apache Software Foundation</Bundle-Vendor>
+                            <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                            <_provider-policy>[$(version;===;$(@)),$(version;=+;$(@)))</_provider-policy>
+                            <_consumer-policy>[$(version;===;$(@)),$(version;+;$(@)))</_consumer-policy>
+                            <_removeheaders>
+                                ReleaseRepository-Id,
+                                ReleaseRepository-Name,
+                                ReleaseRepository-URL,
+                                SnapshotRepository-Id,
+                                SnapshotRepository-Name,
+                                SnapshotRepository-URL,
+                                Include-Resource,
+                                Private-Package
+                            </_removeheaders>
+                        </instructions>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>baseline</id>
+                            <goals>
+                                <goal>baseline</goal>
+                            </goals>
+                            <configuration>
+                                <failOnError>false</failOnError>
+                                <comparisonVersion>3.1.30</comparisonVersion>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <!-- ====================================================================== -->
                 <!-- S U R E F I R E   P L U G I N                                          -->
@@ -181,6 +215,7 @@
                             <exclude>.idea/**</exclude>
                             <exclude>.gitignore</exclude>
                             <exclude>derby.log</exclude>
+                            <exclude>**/*.zip/**</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
@@ -309,6 +344,12 @@
                 <version>1.2.12</version>
                 <scope>provided</scope>
             </dependency>
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>2.0.2</version>
+                <scope>provided</scope>
+            </dependency>
 
             <!-- other -->
             <!-- osgi stuff -->
@@ -331,12 +372,12 @@
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.2</version>
+                <version>1.10</version>
             </dependency>
             <dependency>
-                <groupId>commons-httpclient</groupId>
-                <artifactId>commons-httpclient</artifactId>
-                <version>3.0</version>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpmime</artifactId>
+                <version>4.5.2</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>
@@ -346,7 +387,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.8.2</version>
+                <version>4.12</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

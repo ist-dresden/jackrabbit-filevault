@@ -20,15 +20,12 @@ package org.apache.jackrabbit.vault.packaging.integration;
 import java.io.File;
 import java.io.IOException;
 
-import javax.jcr.Binary;
 import javax.jcr.NodeIterator;
 import javax.jcr.Property;
 import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.derby.impl.load.Import;
-import org.apache.jackrabbit.vault.fs.api.ProgressTrackerListener;
 import org.apache.jackrabbit.vault.fs.io.ImportOptions;
 import org.apache.jackrabbit.vault.packaging.InstallContext;
 import org.apache.jackrabbit.vault.packaging.JcrPackage;
@@ -44,7 +41,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
- * <code>TestPackageInstall</code>...
+ * {@code TestPackageInstall}...
  */
 public class TestPackageInstall extends IntegrationTestBase {
 
@@ -433,6 +430,37 @@ public class TestPackageInstall extends IntegrationTestBase {
     }
 
     /**
+     * Test is binaries outside the filter are not imported (JCRVLT-126)
+     */
+    @Test
+    public void testBinaryPropertiesOutsideFilter() throws RepositoryException, IOException, PackageException {
+        // first install the package once to create the intermediate nodes
+        JcrPackage pack = packMgr.upload(getStream("testpackages/test_filter_binary.zip"), false);
+        assertNotNull(pack);
+        pack.install(getDefaultOptions());
+        assertProperty("/tmp/test", "123");
+
+        // delete the binary properties
+        if (admin.itemExists("/root-binary-property")) {
+            admin.removeItem("/root-binary-property");
+        }
+
+        admin.removeItem("/tmp/tmp-binary-property");
+        admin.removeItem("/tmp/test");
+        admin.removeItem("/tmp/test-project");
+        admin.save();
+
+        assertPropertyMissing("/root-binary-property");
+        assertPropertyMissing("/tmp/tmp-binary-property");
+
+        // now install again and check if the properties are still missing
+        pack.install(getDefaultOptions());
+        assertPropertyMissing("/tmp/test");
+        assertPropertyMissing("/root-binary-property");
+        assertPropertyMissing("/tmp/tmp-binary-property");
+    }
+
+    /**
      * Installs a package with a different node type
      */
     @Test
@@ -455,6 +483,63 @@ public class TestPackageInstall extends IntegrationTestBase {
 
         assertNodeExists("/tmp/foo");
         assertEquals(admin.getNode("/tmp").getPrimaryNodeType().getName(), "nt:folder");
+    }
+
+    /**
+     * Installs a package with versioned nodes
+     */
+    @Test
+    public void testVersionInstall() throws RepositoryException, IOException, PackageException {
+        JcrPackage pack = packMgr.upload(getStream("testpackages/test_version.zip"), false);
+        assertNotNull(pack);
+
+        ImportOptions opts = getDefaultOptions();
+        pack.install(opts);
+
+        assertProperty("/testroot/a/test", "123");
+        assertProperty("/testroot/a/jcr:isCheckedOut", "false");
+
+        // modify
+        admin.getWorkspace().getVersionManager().checkout("/testroot/a");
+        admin.getProperty("/testroot/a/test").setValue("test");
+        admin.save();
+        admin.getWorkspace().getVersionManager().checkin("/testroot/a");
+
+        // install a 2nd time
+        opts = getDefaultOptions();
+        pack.install(opts);
+
+        assertProperty("/testroot/a/test", "123");
+        assertProperty("/testroot/a/jcr:isCheckedOut", "false");
+
+    }
+
+
+    /**
+     * Installs a package with versions retains checked out state
+     */
+    @Test
+    public void testVersionInstallCheckedOut() throws RepositoryException, IOException, PackageException {
+        JcrPackage pack = packMgr.upload(getStream("testpackages/test_version.zip"), false);
+        assertNotNull(pack);
+
+        ImportOptions opts = getDefaultOptions();
+        pack.install(opts);
+
+        assertProperty("/testroot/a/test", "123");
+        assertProperty("/testroot/a/jcr:isCheckedOut", "false");
+
+        // modify
+        admin.getWorkspace().getVersionManager().checkout("/testroot/a");
+        admin.getProperty("/testroot/a/test").setValue("test");
+        admin.save();
+
+        // install a 2nd time
+        opts = getDefaultOptions();
+        pack.install(opts);
+
+        assertProperty("/testroot/a/test", "123");
+        assertProperty("/testroot/a/jcr:isCheckedOut", "false");
     }
 
 

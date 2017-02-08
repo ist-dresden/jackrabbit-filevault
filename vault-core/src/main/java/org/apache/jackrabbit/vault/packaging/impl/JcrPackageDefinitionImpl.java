@@ -24,11 +24,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.jcr.Node;
 import javax.jcr.Property;
 import javax.jcr.RepositoryException;
 import javax.jcr.Session;
 import javax.jcr.Value;
+import javax.jcr.ValueFactory;
 
 import org.apache.jackrabbit.util.ISO8601;
 import org.apache.jackrabbit.vault.fs.Mounter;
@@ -68,21 +71,24 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     /**
      * underlying node
      */
+    @Nonnull
     private Node defNode;
 
+    @Nullable
     private String userId;
 
     /**
      * Creates a new definition base on the underlying node.
      * @param definitionNode the definition node
      */
-    public JcrPackageDefinitionImpl(Node definitionNode) {
+    public JcrPackageDefinitionImpl(@Nonnull Node definitionNode) {
         this.defNode = definitionNode;
     }
 
     /**
      * {@inheritDoc}
      */
+    @Nonnull
     public Node getNode() {
         return defNode;
     }
@@ -110,7 +116,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     /**
      * Writes the properties derived from the package id to the content
      * @param id the package id
-     * @param autoSave if <code>true</code> the changes are saved automatically.
+     * @param autoSave if {@code true} the changes are saved automatically.
      */
     public void setId(PackageId id, boolean autoSave) {
         set(PN_GROUP, id.getGroup(), false);
@@ -122,7 +128,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
      * Returns the installation path. If the path is not defined in the definition,
      * the grand-parent of the underlying node is returned. if the path would end
      * with .zip or .jar, the extension is truncated.
-     * @return the installation path or <code>null</code> if it cannot be determined.
+     * @return the installation path or {@code null} if it cannot be determined.
      */
     private String getInstallationPath() {
         try {
@@ -204,7 +210,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
         if (!force && isUnwrapped()) {
             return;
         }
-        log.info("unwrapping package {}", pack == null ? "(unknown)" : pack.getId());
+        log.debug("unwrapping package {}", pack == null ? "(unknown)" : pack.getId());
         long now = System.currentTimeMillis();
         unwrap(pack == null ? null : pack.getArchive(), autoSave);
         if (log.isDebugEnabled()) {
@@ -233,7 +239,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
         defNode.setProperty("unwrapped", (Value) null);
         defNode.setProperty(PN_LAST_UNWRAPPED, Calendar.getInstance());
         if (autoSave) {
-            defNode.save();
+            defNode.getSession().save();
         }
     }
 
@@ -242,7 +248,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
      * package to this node.
      *
      * @param packArchive the archive of the package
-     * @param autoSave saves changed automatically if <code>true</code>
+     * @param autoSave saves changed automatically if {@code true}
      * @throws RepositoryException if an error occurs
      */
     private void extractDefinition(Archive packArchive, boolean autoSave)
@@ -292,7 +298,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
                 defNode.setProperty(PN_LAST_UNPACKED_BY, lastUnpackedBy);
             }
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (Exception e) {
             log.error("Unable to extract definition: {}", e.toString());
@@ -320,6 +326,25 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
             log.error("Error during getDependencies()", e);
         }
         return Dependency.EMPTY;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void setDependencies(@Nonnull Dependency[] dependencies, boolean autoSave) {
+        try {
+            final Value[] values = new Value[dependencies.length];
+            final ValueFactory fac = defNode.getSession().getValueFactory();
+            for (int i=0; i<dependencies.length; i++) {
+                values[i] = fac.createValue(dependencies[i].toString());
+            }
+            defNode.setProperty(PN_DEPENDENCIES, values);
+            if (autoSave) {
+                defNode.getSession().save();
+            }
+        } catch (RepositoryException e) {
+            log.error("Error during setDependencies()", e);
+        }
     }
 
     /**
@@ -377,7 +402,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     /**
      * Writes the given properties to the content.
      * @param props the properties
-     * @param autoSave saves the changes automatically if <code>true</code>
+     * @param autoSave saves the changes automatically if {@code true}
      */
     protected void writeProperties(Properties props, boolean autoSave) {
         try {
@@ -423,7 +448,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
             defNode.setProperty(PN_CND_PATTERN, props.getProperty(VaultPackage.NAME_CND_PATTERN));
             defNode.setProperty(PN_DISABLE_INTERMEDIATE_SAVE, props.getProperty(VaultPackage.NAME_DISABLE_INTERMEDIATE_SAVE));
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (RepositoryException e) {
             log.error("error while saving properties.", e);
@@ -433,7 +458,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     /**
      * Internal method that converts a ISO date to a calendar.
      * @param iso the iso8601 formatted date
-     * @return the calendar or <code>null</code>
+     * @return the calendar or {@code null}
      */
     private static Calendar getDate(String iso) {
         if (iso == null) {
@@ -546,7 +571,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
                     now == null ? Calendar.getInstance() : now);
             defNode.setProperty(PN_LASTMODIFIED_BY, getUserId());
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (RepositoryException e) {
             log.error("Error during touch()", e);
@@ -572,8 +597,8 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
      * - updates the lastUnwrapped(by) properties
      * - clears the unwrapped property
      *
-     * @param now the date or <code>null</code>
-     * @param autoSave saves the changes automatically if <code>true</code>
+     * @param now the date or {@code null}
+     * @param autoSave saves the changes automatically if {@code true}
      */
     public void sealForAssembly(Calendar now, boolean autoSave) {
         try {
@@ -601,8 +626,8 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
      * - updates the lastUnwrapped(by) properties
      * - clears the unwrapped property
      *
-     * @param now the date or <code>null</code>
-     * @param autoSave saves the changes automatically if <code>true</code>
+     * @param now the date or {@code null}
+     * @param autoSave saves the changes automatically if {@code true}
      */
     public void sealForRewrap(Calendar now, boolean autoSave) {
         try {
@@ -621,7 +646,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
             defNode.setProperty("unwrapped", (Value) null);
             touch(now, false);
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (RepositoryException e) {
             log.error("Error during sealForRewrap()", e);
@@ -630,8 +655,8 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
 
     /**
      * Touches the lastUnpacked (i.e. installed) properties.
-     * @param now the date or <code>null</code>
-     * @param autoSave saves the changes automatically if <code>true</code>
+     * @param now the date or {@code null}
+     * @param autoSave saves the changes automatically if {@code true}
      */
     public void touchLastUnpacked(Calendar now, boolean autoSave) {
         try {
@@ -639,7 +664,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
                     now == null ? Calendar.getInstance() : now);
             defNode.setProperty(PN_LAST_UNPACKED_BY, getUserId());
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (RepositoryException e) {
             log.error("Error during touchLastUnpacked()", e);
@@ -648,7 +673,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
 
     /**
      * Clears the last unpacked properties.
-     * @param autoSave saves the changes automatically if <code>true</code>
+     * @param autoSave saves the changes automatically if {@code true}
      */
     public void clearLastUnpacked(boolean autoSave) {
         try {
@@ -659,7 +684,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
                 defNode.getProperty(PN_LAST_UNPACKED_BY).remove();
             }
             if (autoSave) {
-                defNode.save();
+                defNode.getSession().save();
             }
         } catch (RepositoryException e) {
             log.error("Error during clearLastUnpacked()", e);
@@ -813,7 +838,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     /**
      * Writes the workspace filter to the definition
      * @param filter the filter
-     * @param save automatically save the changes if <code>true</code>
+     * @param save automatically save the changes if {@code true}
      * @throws RepositoryException if an error occurs
      */
     public void writeFilter(WorkspaceFilter filter, boolean save)
@@ -822,7 +847,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
     }
 
     /**
-     * Returns a export processor that add the inlines definition package to
+     * Returns a export processor that adds the inline definition package to
      * the exporter.
      * @return the export processor for this definition
      */
@@ -832,15 +857,13 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
 
     /**
      * Returns the user id of the current session. if the userid provided by
-     * the session is <code>null</code>, "system" is returned.
+     * the session is {@code null}, "system" is returned.
      * @return the user id
      */
     private String getUserId() {
         if (userId == null) {
             try {
-                if (defNode != null) {
-                    userId = defNode.getSession().getUserID();
-                }
+                userId = defNode.getSession().getUserID();
             } catch (RepositoryException e) {
                 // ignore
             }
@@ -944,7 +967,7 @@ public class JcrPackageDefinitionImpl implements JcrPackageDefinition {
             } finally {
                 try {
                     // revert removed properties
-                    defNode.refresh(false);
+                    defNode.getSession().refresh(false);
                 } catch (RepositoryException e) {
                     // ignore
                 }

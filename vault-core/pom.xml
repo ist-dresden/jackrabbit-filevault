@@ -23,14 +23,14 @@
         <groupId>org.apache.jackrabbit.vault</groupId>
         <artifactId>parent</artifactId>
         <relativePath>../parent/pom.xml</relativePath>
-        <version>3.1.27-SNAPSHOT</version>
+        <version>3.1.35-SNAPSHOT</version>
     </parent>
 
     <!-- ====================================================================== -->
     <!-- P R O J E C T  D E S C R I P T I O N                                   -->
     <!-- ====================================================================== -->
     <artifactId>org.apache.jackrabbit.vault</artifactId>
-    <version>3.1.27-SNAPSHOT</version>
+    <version>3.1.35-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>Apache Jackrabbit FileVault Core Bundle</name>
@@ -70,23 +70,6 @@
                 <configuration>
                     <instructions>
                         <Bundle-Build>${buildNumber}</Bundle-Build>
-                        <Bundle-Category>jcr,granite</Bundle-Category>
-                        <Export-Package>
-                            org.apache.jackrabbit.vault.fs;version=2.4.0,
-                            org.apache.jackrabbit.vault.fs.api;version=2.4.0,
-                            org.apache.jackrabbit.vault.fs.spi;version=2.4.0,
-                            org.apache.jackrabbit.vault.fs.config;version=2.4.0,
-                            org.apache.jackrabbit.vault.fs.filter;version=2.4.0,
-                            org.apache.jackrabbit.vault.fs.io;version=2.4.0,
-                            org.apache.jackrabbit.vault.util.*;version=2.4.0,
-                            org.apache.jackrabbit.vault.packaging;version=2.4.0
-                        </Export-Package>
-                        <Private-Package>
-                            org.apache.jackrabbit.vault.fs.impl.*,
-                            org.apache.jackrabbit.vault.fs.spi.impl.*,
-                            org.apache.jackrabbit.vault.packaging.impl.*,
-                            org.apache.jackrabbit.vault.packaging.hotfix.*
-                        </Private-Package>
                         <Import-Package>
                             org.apache.jackrabbit.*;version=!,
                             org.apache.sling.jcr.api;resolution:=optional,
@@ -106,7 +89,16 @@
                             jackrabbit-spi-commons,
                             jackrabbit-spi
                         </Embed-Dependency>
+                        <!-- to load hook classes through this bundle's classloader -->
+                        <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <excludePackageNames>org.apache.jackrabbit.vault.util.xml.*</excludePackageNames>
                 </configuration>
             </plugin>
         </plugins>
@@ -156,11 +148,22 @@
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- osgi stuff -->
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>biz.aQute</groupId>
+            <artifactId>bndlib</artifactId>
+            <version>1.43.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -205,6 +208,12 @@
         <dependency>
             <groupId>org.apache.jackrabbit</groupId>
             <artifactId>oak-jcr</artifactId>
+            <version>${oak.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jackrabbit</groupId>
+            <artifactId>oak-segment</artifactId>
             <version>${oak.version}</version>
             <scope>test</scope>
         </dependency>

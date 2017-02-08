@@ -464,7 +464,7 @@ public class AggregateManagerImpl implements AggregateManager {
      * Writes the artifact set back to the repository.
      *
      * @param node the artifact node to write
-     * @param reposName the name of the new node or <code>null</code>
+     * @param reposName the name of the new node or {@code null}
      * @param artifacts the artifact to write
      * @return infos about the modifications
      * @throws RepositoryException if an error occurs.
@@ -600,7 +600,7 @@ public class AggregateManagerImpl implements AggregateManager {
                         .append(numPrepared).append(" of ")
                         .append(numCreated).append(" prepared, ")
                         .append(numCollected).append(" collected").toString();
-                log.debug("- {}", str);
+                log.trace("- {}", str);
                 if (tracker != null) {
                     tracker.onMessage(ProgressTrackerListener.Mode.TEXT, "-", str);
                 }

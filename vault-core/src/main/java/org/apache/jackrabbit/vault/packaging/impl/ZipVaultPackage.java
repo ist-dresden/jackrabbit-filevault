@@ -53,16 +53,16 @@ public class ZipVaultPackage extends PackagePropertiesImpl implements VaultPacka
 
     private Archive archive;
 
-    protected ZipVaultPackage(File file, boolean isTmpFile) throws IOException {
+    public ZipVaultPackage(File file, boolean isTmpFile) throws IOException {
         this(file, isTmpFile, false);
     }
 
-    protected ZipVaultPackage(File file, boolean isTmpFile, boolean strict)
+    public ZipVaultPackage(File file, boolean isTmpFile, boolean strict)
             throws IOException {
         this(new ZipArchive(file, isTmpFile), strict);
     }
 
-    protected ZipVaultPackage(Archive archive, boolean strict)
+    public ZipVaultPackage(Archive archive, boolean strict)
             throws IOException {
         this.archive = archive;
         if (strict) {
@@ -122,7 +122,7 @@ public class ZipVaultPackage extends PackagePropertiesImpl implements VaultPacka
 
     /**
      * Returns the file this package is based on.
-     * @return the file of this package or <code>null</code>.
+     * @return the file of this package or {@code null}.
      */
     public File getFile() {
         return (archive instanceof ZipArchive) ? ((ZipArchive) archive).getFile() : null;
@@ -221,7 +221,7 @@ public class ZipVaultPackage extends PackagePropertiesImpl implements VaultPacka
     protected void extract(InstallContextImpl ctx,
                            List<String> subPackages)
             throws RepositoryException, PackageException {
-        log.info("Extracting {}", getId());
+        log.debug("Extracting {}", getId());
         InstallHookProcessor hooks = ctx.getHooks();
         Importer importer = ctx.getImporter();
         try {
@@ -252,7 +252,7 @@ public class ZipVaultPackage extends PackagePropertiesImpl implements VaultPacka
         if (subPackages != null) {
             subPackages.addAll(importer.getSubPackages());
         }
-        log.info("Extracting {} completed.", getId());
+        log.debug("Extracting {} completed.", getId());
     }
 
     @Override

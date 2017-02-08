@@ -23,14 +23,14 @@
         <groupId>org.apache.jackrabbit.vault</groupId>
         <artifactId>parent</artifactId>
         <relativePath>../parent/pom.xml</relativePath>
-        <version>3.1.27-SNAPSHOT</version>
+        <version>3.1.35-SNAPSHOT</version>
     </parent>
 
     <!-- ====================================================================== -->
     <!-- P R O J E C T  D E S C R I P T I O N                                   -->
     <!-- ====================================================================== -->
     <artifactId>vault-cli</artifactId>
-    <version>3.1.27-SNAPSHOT</version>
+    <version>3.1.35-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Apache Jackrabbit FileVault Command Line Interface</name>
@@ -66,12 +66,12 @@
                 </executions>
                 <configuration>
                     <licenseHeaderFile>${basedir}/src/main/appassembler/license-header.txt</licenseHeaderFile>
-                    <unixScriptTemplate>${basedir}/src/main/appassembler/unix-template</unixScriptTemplate>
-                    <windowsScriptTemplate>${basedir}/src/main/appassembler/windows-template</windowsScriptTemplate>
+                    <unixScriptTemplate>${basedir}/src/main/appassembler/unix-template.sh</unixScriptTemplate>
+                    <windowsScriptTemplate>${basedir}/src/main/appassembler/windows-template.bat</windowsScriptTemplate>
                     <repositoryLayout>flat</repositoryLayout>
                     <repositoryName>lib</repositoryName>
                     <includeConfigurationDirectoryInClasspath>false</includeConfigurationDirectoryInClasspath>
-                    <extraJvmArguments>-Xms500m -Xmx500m -XX:PermSize=128m -XX:-UseGCOverheadLimit</extraJvmArguments>
+                    <extraJvmArguments>-Xms500m -Xmx500m</extraJvmArguments>
                     <programs>
                         <program>
                             <mainClass>org.apache.jackrabbit.vault.cli.VaultFsApp</mainClass>
@@ -113,8 +113,8 @@
                 <artifactId>apache-rat-plugin</artifactId>
                 <configuration>
                     <excludes>
-                        <exclude>src/main/appassembler/unix-template</exclude>
-                        <exclude>src/main/appassembler/windows-template</exclude>
+                        <exclude>src/main/appassembler/unix-template.sh</exclude>
+                        <exclude>src/main/appassembler/windows-template.bat</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -128,22 +128,22 @@
         <dependency>
             <groupId>org.apache.jackrabbit.vault</groupId>
             <artifactId>org.apache.jackrabbit.vault</artifactId>
-            <version>3.1.27-SNAPSHOT</version>
+            <version>3.1.35-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jackrabbit.vault</groupId>
             <artifactId>vault-vlt</artifactId>
-            <version>3.1.27-SNAPSHOT</version>
+            <version>3.1.35-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jackrabbit.vault</groupId>
             <artifactId>vault-sync</artifactId>
-            <version>3.1.27-SNAPSHOT</version>
+            <version>3.1.35-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jackrabbit.vault</groupId>
             <artifactId>vault-davex</artifactId>
-            <version>3.1.27-SNAPSHOT</version>
+            <version>3.1.35-SNAPSHOT</version>
         </dependency>
 
         <!-- CLI Stuff -->

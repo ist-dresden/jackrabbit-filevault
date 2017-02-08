@@ -17,17 +17,23 @@
 
 package org.apache.jackrabbit.vault.fs.io;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import aQute.bnd.annotation.ConsumerType;
+
 /**
- * <code>DocViewAnalyzerListener</code>...
+ * {@code DocViewAnalyzerListener}...
  */
+@ConsumerType
 public interface DocViewAnalyzerListener {
 
     /**
      * Is called when the analyzer passes a node element.
      *
      * @param path the path of the node
-     * @param intermediate <code>true</code> if intermediate node
-     * @param nodeType the primary type of the node or <code>null</code> if empty.
+     * @param intermediate {@code true} if intermediate node
+     * @param nodeType the primary type of the node or {@code null} if empty.
      */
-    void onNode(String path, boolean intermediate, String nodeType);
+    void onNode(@Nonnull String path, boolean intermediate, @Nullable String nodeType);
 }

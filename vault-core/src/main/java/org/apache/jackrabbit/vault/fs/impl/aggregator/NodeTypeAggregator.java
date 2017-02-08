@@ -19,6 +19,7 @@ package org.apache.jackrabbit.vault.fs.impl.aggregator;
 
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 
 import org.apache.jackrabbit.vault.fs.api.ArtifactType;
 import org.apache.jackrabbit.vault.fs.api.DumpContext;
@@ -39,7 +40,7 @@ public class NodeTypeAggregator extends GenericAggregator {
     /**
      * {@inheritDoc}
      *
-     * @return <code>true</code> always.
+     * @return {@code true} always.
      */
     public boolean hasFullCoverage() {
         return true;
@@ -62,7 +63,6 @@ public class NodeTypeAggregator extends GenericAggregator {
 
     /**
      * {@inheritDoc}
-     * @param aggregate
      */
     public ArtifactSetImpl createArtifacts(AggregateImpl aggregate) throws RepositoryException {
         ArtifactSetImpl artifacts = new ArtifactSetImpl();
@@ -77,10 +77,10 @@ public class NodeTypeAggregator extends GenericAggregator {
     public ImportInfo remove(Node node, boolean recursive, boolean trySave) throws RepositoryException {
         ImportInfo info = new ImportInfoImpl();
         info.onDeleted(node.getPath());
-        Node parent = node.getParent();
+        Session s = node.getSession();
         node.remove();
         if (trySave) {
-            parent.save();
+            s.save();
         }
         return info;
     }

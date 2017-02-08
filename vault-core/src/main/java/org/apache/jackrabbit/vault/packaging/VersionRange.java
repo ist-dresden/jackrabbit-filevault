@@ -55,13 +55,19 @@ public class VersionRange {
 
     /**
      * Creates a new version range.
-     * @param low lower bound or <code>null</code>
+     * @param low lower bound or {@code null}
      * @param lowIncl specifies if lower bound is inclusive
-     * @param high upper bound or <code>null</code>
+     * @param high upper bound or {@code null}
      * @param highIncl specifies if upper bound is inclusive
      * @throws IllegalArgumentException if bounds are not valid
      */
     public VersionRange(Version low, boolean lowIncl, Version high, boolean highIncl) {
+        if (low == Version.EMPTY) {
+            low = null;
+        }
+        if (high == Version.EMPTY) {
+            high = null;
+        }
         // check if range is valid
         if (low != null && high != null) {
             int comp = low.compareTo(high);
@@ -114,15 +120,15 @@ public class VersionRange {
 
     /**
      * Returns the lower bound
-     * @return the lower bound or <code>null</code>
+     * @return the lower bound or {@code null}
      */
     public Version getLow() {
         return low;
     }
 
     /**
-     * Returns <code>true</code> if the lower bound is inclusive
-     * @return <code>true</code> if the lower bound is inclusive
+     * Returns {@code true} if the lower bound is inclusive
+     * @return {@code true} if the lower bound is inclusive
      */
     public boolean isLowInclusive() {
         return lowIncl;
@@ -130,15 +136,15 @@ public class VersionRange {
 
     /**
      * Returns the upper bound
-     * @return the upper bound or <code>null</code>
+     * @return the upper bound or {@code null}
      */
     public Version getHigh() {
         return high;
     }
 
     /**
-     * Returns <code>true</code> if the upper bound is inclusive
-     * @return <code>true</code> if the upper bound is inclusive
+     * Returns {@code true} if the upper bound is inclusive
+     * @return {@code true} if the upper bound is inclusive
      */
     public boolean isHighInclusive() {
         return highIncl;
@@ -163,17 +169,17 @@ public class VersionRange {
     /**
      * Checks if the given version is in this range.
      * @param v the version to check
-     * @return <code>true</code> if the given version is in this range.
+     * @return {@code true} if the given version is in this range.
      */
     public boolean isInRange(Version v) {
         if (low != null) {
-            int comp = v.osgiCompareTo(low);
+            int comp = v.compareTo(low);
             if (comp < 0 || comp == 0 && !lowIncl) {
                 return false;
             }
         }
         if (high != null) {
-            int comp = v.osgiCompareTo(high);
+            int comp = v.compareTo(high);
             if (comp > 0 || comp == 0 && !highIncl) {
                 return false;
             }

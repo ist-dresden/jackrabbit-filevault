@@ -89,7 +89,7 @@ public class InstallHookProcessorImpl implements InstallHookProcessor {
                     String name = names.nextElement().toString();
                     if (name.startsWith(VaultPackage.PREFIX_INSTALL_HOOK)) {
                         String[] segs = Text.explode(name.substring(VaultPackage.PREFIX_INSTALL_HOOK.length()), '.');
-                        if (segs.length == 0 || segs.length > 2 || !segs[1].equals("class")) {
+                        if (segs.length == 0 || segs.length > 2 || !"class".equals(segs[1])) {
                             throw new PackageException("Invalid installhook property: " + name);
                         }
                         Hook hook = new Hook(segs[0], props.getProperty(name), classLoader);
@@ -170,8 +170,6 @@ public class InstallHookProcessorImpl implements InstallHookProcessor {
 
         private final File jarFile;
 
-        private ClassLoader classLoader;
-
         private ClassLoader parentClassLoader;
 
         private InstallHook hook;
@@ -193,7 +191,6 @@ public class InstallHookProcessorImpl implements InstallHookProcessor {
 
         private void destroy() {
             parentClassLoader = null;
-            classLoader = null;
             hook = null;
             if (jarFile != null) {
                 FileUtils.deleteQuietly(jarFile);
@@ -201,41 +198,61 @@ public class InstallHookProcessorImpl implements InstallHookProcessor {
         }
 
         private void init() throws IOException, PackageException {
-            // create classloader
-            if (parentClassLoader == null) {
-                parentClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+	            if (jarFile != null) {
+	                // open jar file and get manifest
+	                JarFile jar = new JarFile(jarFile);
+	                Manifest mf = jar.getManifest();
+	                if (mf == null) {
+	                    throw new PackageException("hook jar file does not have a manifest: " + name);
+	                }
+	                mainClassName = mf.getMainAttributes().getValue("Main-Class");
+	                if (mainClassName == null) {
+	                    throw new PackageException("hook manifest file does not have a Main-Class entry: " + name);
+	                }
+	                // create classloader
+	                if (parentClassLoader == null) {
+	                    try {
+	                    	// 1st fallback is the current classes classloader (the bundle classloader in the OSGi context)
+	                    	loadMainClass(URLClassLoader.newInstance(
+	        	                    new URL[]{jarFile.toURI().toURL()},
+	        	                    this.getClass().getClassLoader()));
+	                    } catch (ClassNotFoundException cnfe) {
+	                    	// 2nd fallback is the thread context classloader
+	                    	loadMainClass(URLClassLoader.newInstance(
+	        	                    new URL[]{jarFile.toURI().toURL()},
+	        	                    Thread.currentThread().getContextClassLoader()));
+	                    }
+	                } else {
+	                	loadMainClass(URLClassLoader.newInstance(
+        	                    new URL[]{jarFile.toURI().toURL()},
+        	                    parentClassLoader));
+	                }
+	            } else {
+	            	// create classloader
+	                if (parentClassLoader == null) {
+	                    try {
+	                    	// 1st fallback is the current classes classloader (the bundle classloader in the OSGi context)
+	                    	loadMainClass(this.getClass().getClassLoader());
+	                    } catch (ClassNotFoundException cnfe) {
+	                    	// 2nd fallback is the thread context classloader
+	                    	loadMainClass(Thread.currentThread().getContextClassLoader());
+	                    }
+	                } else {
+	                	loadMainClass(parentClassLoader);
+	                }
+	            }
+            } catch (ClassNotFoundException cnfe) {
+                throw new PackageException("hook's main class " + mainClassName + " not found: " + name, cnfe);
             }
-
-            if (jarFile != null) {
-                // open jar file and get manifest
-                JarFile jar = new JarFile(jarFile);
-                Manifest mf = jar.getManifest();
-                if (mf == null) {
-                    throw new PackageException("hook jar file does not have a manifest: " + name);
-                }
-                mainClassName = mf.getMainAttributes().getValue("Main-Class");
-                if (mainClassName == null) {
-                    throw new PackageException("hook manifest file does not have a Main-Class entry: " + name);
-                }
-                classLoader = URLClassLoader.newInstance(
-                    new URL[]{jarFile.toURL()},
-                    parentClassLoader);
-            } else {
-                classLoader = parentClassLoader;
-            }
-            loadMainClass();
+            
         }
 
-        private void loadMainClass() throws PackageException {
+        private void loadMainClass(ClassLoader classLoader) throws PackageException, ClassNotFoundException {
             log.info("Loading Hook {}: Main-Class = {}", name, mainClassName);
 
             // find main class
-            Class clazz;
-            try {
-                clazz = classLoader.loadClass(mainClassName);
-            } catch (ClassNotFoundException e) {
-                throw new PackageException("hook's main class " + mainClassName + " not found: " + name, e);
-            }
+            Class clazz = classLoader.loadClass(mainClassName);
             if (!InstallHook.class.isAssignableFrom(clazz)) {
                 throw new PackageException("hook's main class " + mainClassName + " does not implement the InstallHook interface: " + name);
             }

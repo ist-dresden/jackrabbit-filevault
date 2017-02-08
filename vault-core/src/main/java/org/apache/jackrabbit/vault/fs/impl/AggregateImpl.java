@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory;
  * of the repository one by invoking the respective aggregators. The aggregates
  * are controlled via the {@link AggregateManagerImpl} and are loaded dynamically
  * when traversing through the tree.
- * <p/>
+ * <p>
  * The aggregates can then later be used by the aggregators to provide the
  * artifacts of this aggregate.
  *
@@ -119,10 +119,10 @@ public class AggregateImpl implements Aggregate {
      */
     protected AggregateImpl(AggregateManagerImpl mgr, String path, Aggregator aggregator)
             throws RepositoryException{
-        log.debug("Create Root Aggregate {}", path);
+        log.trace("Create Root Aggregate {}", path);
         this.mgr = mgr;
         this.parent = null;
-        this.path = path.equals("/") ? "" : path;
+        this.path = "/".equals(path) ? "" : path;
         this.aggregator = aggregator;
         this.useBinaryReferences = "true".equals(mgr.getConfig().getProperty(VaultFsConfig.NAME_USE_BINARY_REFERENCES));
     }
@@ -136,7 +136,7 @@ public class AggregateImpl implements Aggregate {
      */
     protected AggregateImpl(AggregateImpl parent, String path, Aggregator aggregator)
             throws RepositoryException{
-        log.debug("Create Aggregate {}", path);
+        log.trace("Create Aggregate {}", path);
         this.mgr = parent.mgr;
         this.parent = parent;
         this.path = path;
@@ -169,7 +169,7 @@ public class AggregateImpl implements Aggregate {
     }
 
     public void invalidate() {
-        log.debug("invalidating aggregate {}", getPath());
+        log.trace("invalidating aggregate {}", getPath());
         artifacts = null;
         includes = null;
         binaries = null;
@@ -227,7 +227,7 @@ public class AggregateImpl implements Aggregate {
             throws RepositoryException {
         if (pos < pathElems.length) {
             String elem = pathElems[pos];
-            if (elem.equals("..")) {
+            if ("..".equals(elem)) {
                 return parent == null ? null : parent.getAggregate(pathElems, pos + 1);
             }
             // find suitable leaf
@@ -264,7 +264,7 @@ public class AggregateImpl implements Aggregate {
                 na.addAll(artifacts);
                 for (Artifact a: na.values()) {
                     if (a.getType() != ArtifactType.DIRECTORY) {
-                        if (!Text.getName(a.getPlatformPath()).equals(".content.xml")) {
+                        if (!".content.xml".equals(Text.getName(a.getPlatformPath()))) {
                             artifacts.remove(a);
                         }
                     }
@@ -288,7 +288,7 @@ public class AggregateImpl implements Aggregate {
     /**
      * Creates a new child artifact node with the given name.
      * Please note, that the returned node is not attached to the tree.
-     * <p/>
+     * <p>
      * If this artifact node does not allow children a RepositoryException is
      * thrown.
      *
@@ -307,7 +307,7 @@ public class AggregateImpl implements Aggregate {
     /**
      * Removes this artifact node from the tree. If this artifact node has
      * directory and non-directory artifacts only the non-directory artifacts
-     * are removed unless <code>recursive</code> is specified.
+     * are removed unless {@code recursive} is specified.
      *
      * @param recursive specifies if directories are removed as well.
      * @return infos about the modifications
@@ -331,7 +331,7 @@ public class AggregateImpl implements Aggregate {
      * Writes the artifacts back to the repository.
      *
      * @param artifacts the artifacts to write
-     * @param reposName the name of a new child node or <code>null</code>
+     * @param reposName the name of a new child node or {@code null}
      * @return infos about the modifications
      * @throws RepositoryException if an error occurs.
      * @throws IOException if an I/O error occurs.
@@ -498,7 +498,7 @@ public class AggregateImpl implements Aggregate {
         String relPath = nodePath.substring(path.length());
         if (includes == null || !includes.contains(relPath)) {
             if (log.isDebugEnabled()) {
-                log.debug("including {} -> {}", path, nodePath);
+                log.trace("including {} -> {}", path, nodePath);
             }
             if (includes == null) {
                 includes = new HashSet<String>();
@@ -516,7 +516,7 @@ public class AggregateImpl implements Aggregate {
         addNamespace(prefixes, propName);
         switch (prop.getType()) {
             case PropertyType.NAME:
-                if (propName.equals("jcr:mixinTypes") || prop.getDefinition().isMultiple()) {
+                if ("jcr:mixinTypes".equals(propName) || prop.getDefinition().isMultiple()) {
                     Value[] values = prop.getValues();
                     for (Value value: values) {
                         addNamespace(prefixes, value.getString());
@@ -543,7 +543,7 @@ public class AggregateImpl implements Aggregate {
         String relPath = propPath.substring(path.length());
         if (includes == null || !includes.contains(relPath)) {
             if (log.isDebugEnabled()) {
-                log.debug("including {} -> {}", path, propPath);
+                log.trace("including {} -> {}", path, propPath);
             }
             // ensure that parent node is included as well
             include(parent, null);
@@ -572,6 +572,15 @@ public class AggregateImpl implements Aggregate {
         }
     }
 
+    private boolean includesProperty(String propertyPath) {
+        for (PathFilterSet filterSet: mgr.getWorkspaceFilter().getPropertyFilterSets()) {
+            if (!filterSet.contains(propertyPath)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private void addNamespace(Set<String> prefixes, String name) throws RepositoryException {
         int idx = name.indexOf(':');
         if (idx > 0) {
@@ -592,7 +601,7 @@ public class AggregateImpl implements Aggregate {
     private void loadNamespaces() {
         if (namespacePrefixes == null) {
             if (log.isDebugEnabled()) {
-                log.debug("loading namespaces of aggregate {}", path);
+                log.trace("loading namespaces of aggregate {}", path);
             }
             try {
                 load();
@@ -630,15 +639,15 @@ public class AggregateImpl implements Aggregate {
     private void load() throws RepositoryException {
         long now = System.currentTimeMillis();
         if (state == STATE_INITIAL) {
-            log.debug("Collect + Preparing {}", getPath());
+            log.trace("Collect + Preparing {}", getPath());
             prepare(getNode(), true);
             state = STATE_PREPARED;
             long end = System.currentTimeMillis();
-            log.debug("Collect + Preparing {} in {}ms", getPath(), (end-now));
+            log.trace("Collect + Preparing {} in {}ms", getPath(), (end-now));
             mgr.onAggregateCollected();
             mgr.onAggregatePrepared();
         } else if (state == STATE_COLLECTED) {
-            log.debug("Preparing {}", getPath());
+            log.trace("Preparing {}", getPath());
             // in this state we were traversed once and all parent items where
             // resolved. now we need to collect the items of our non-collected
             // leafs
@@ -649,7 +658,7 @@ public class AggregateImpl implements Aggregate {
             }
             state = STATE_PREPARED;
             long end = System.currentTimeMillis();
-            log.debug("Preparing {} in {}ms", getPath(), (end-now));
+            log.trace("Preparing {} in {}ms", getPath(), (end-now));
             mgr.onAggregatePrepared();
         }
     }
@@ -657,11 +666,11 @@ public class AggregateImpl implements Aggregate {
     private void collect() throws RepositoryException {
         if (state == STATE_INITIAL) {
             long now = System.currentTimeMillis();
-            log.debug("Collecting {}", getPath());
+            log.trace("Collecting {}", getPath());
             prepare(getNode(), false);
             state = STATE_COLLECTED;
             long end = System.currentTimeMillis();
-            log.debug("Collecting  {} in {}ms", getPath(), (end-now));
+            log.trace("Collecting  {} in {}ms", getPath(), (end-now));
             mgr.onAggregateCollected();
         }
     }
@@ -669,14 +678,14 @@ public class AggregateImpl implements Aggregate {
     private void prepare(Node node, boolean descend)
             throws RepositoryException {
         if (log.isDebugEnabled()) {
-            log.debug("descending into {} (descend={})", node.getPath(), descend);
+            log.trace("descending into {} (descend={})", node.getPath(), descend);
         }
         // add "our" properties to the include set
         PropertyIterator pIter = node.getProperties();
         while (pIter.hasNext()) {
             Property p = pIter.nextProperty();
             String path = p.getPath();
-            if (aggregator.includes(getNode(), node, p, path)) {
+            if (aggregator.includes(getNode(), node, p, path) && includesProperty(path)) {
                 include(node, p, path);
             }
         }
@@ -730,7 +739,7 @@ public class AggregateImpl implements Aggregate {
                             sub = null;
                         }
                     } else {
-                        log.debug("adding pending leaf {}", path);
+                        log.trace("adding pending leaf {}", path);
                     }
                     if (sub != null) {
                         leaves.add(sub);

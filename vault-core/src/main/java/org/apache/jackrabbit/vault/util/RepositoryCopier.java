@@ -25,6 +25,7 @@ import java.util.Set;
 
 import javax.jcr.Credentials;
 import javax.jcr.ImportUUIDBehavior;
+import javax.jcr.LoginException;
 import javax.jcr.NamespaceException;
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
@@ -211,7 +212,7 @@ public class RepositoryCopier {
                 if (srcCreds == null && credentialsProvider != null) {
                     srcCreds = credentialsProvider.getCredentials(src);
                 }
-                srcSession = srcRepo.login(srcCreds, src.getWorkspace());
+                srcSession = login(srcRepo, srcCreds, src.getWorkspace());
             } catch (RepositoryException e) {
                 log.error("Error while logging in src repository {}: {}", src, e.toString());
                 return;
@@ -220,9 +221,9 @@ public class RepositoryCopier {
             try {
                 Credentials dstCreds = dst.getCredentials();
                 if (dstCreds == null && credentialsProvider != null) {
-                    dstCreds = credentialsProvider.getCredentials(src);
+                    dstCreds = credentialsProvider.getCredentials(dst);
                 }
-                dstSession = dstRepo.login(dstCreds, dst.getWorkspace());
+                dstSession = login(dstRepo, dstCreds, dst.getWorkspace());
             } catch (RepositoryException e) {
                 log.error("Error while logging in dst repository {}: {}", dst, e.toString());
                 return;
@@ -530,13 +531,13 @@ public class RepositoryCopier {
         }
     }
     /**
-     * Checks if <code>src</code> node is newer than <code>dst</code> node.
+     * Checks if {@code src} node is newer than {@code dst} node.
      * this only applies if the nodes have either a "jcr:lastModified" or
      * "cq:lastModified" property.
      *
      * @param src source node
      * @param dst destination node
-     * @return <code>true</code> if src is newer than dst node or if the
+     * @return {@code true} if src is newer than dst node or if the
      *         nodes could not be compared
      */
     private boolean isNewer(Node src, Node dst) {
@@ -605,5 +606,20 @@ public class RepositoryCopier {
 
     public CredentialsProvider getCredentialsProvider() {
         return credentialsProvider;
+    }
+
+
+    private Session login(Repository rep, Credentials credentials, String wspName) throws RepositoryException {
+        try {
+            return rep.login(credentials, wspName);
+        } catch (LoginException e) {
+            if (wspName == null) {
+                // try again with default workspace
+                // todo: make configurable
+                return rep.login(credentials, "crx.default");
+            } else {
+                throw e;
+            }
+        }
     }
 }
